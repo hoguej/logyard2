@@ -1,51 +1,81 @@
 #!/bin/bash
 # Create a new agent workspace, register it, claim a task, and invoke Cursor agent to do the work
-# Usage: ./scripts/new-agent.sh <agent-name> [context-description] [task-title-pattern]
+# Usage: ./scripts/new-agent.sh <agent-name> [context-description] [task-title-pattern] [--loop]
 
 set -e
 
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 <agent-name> [context-description] [task-title-pattern]"
+LOOP_MODE=false
+# Parse arguments
+ARGS=()
+for arg in "$@"; do
+    if [ "$arg" = "--loop" ]; then
+        LOOP_MODE=true
+    else
+        ARGS+=("$arg")
+    fi
+done
+
+if [ ${#ARGS[@]} -lt 1 ]; then
+    echo "Usage: $0 <agent-name> [context-description] [task-title-pattern] [--loop]"
     echo "Example: $0 alpha 'Working on authentication features' 'RESEARCH'"
+    echo "         $0 alpha 'Working on features' --loop  (watch for new work and claim it)"
     exit 1
 fi
 
-AGENT_NAME="$1"
-CONTEXT_DESC="${2:-Agent workspace for $AGENT_NAME}"
-TASK_PATTERN="$3"
+AGENT_NAME="${ARGS[0]}"
+CONTEXT_DESC="${ARGS[1]:-Agent workspace for $AGENT_NAME}"
+TASK_PATTERN="${ARGS[2]}"
 REPO_URL="https://github.com/hoguej/logyard2.git"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+DB_FILE="$PROJECT_ROOT/.agent-queue.db"
 
-# Generate unique workspace name with timestamp
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-WORKSPACE_NAME="agent_${AGENT_NAME}_${TIMESTAMP}"
-WORKSPACE_PATH="workspaces/${WORKSPACE_NAME}"
+# Initialize queue database if it doesn't exist
+if [ ! -f "$DB_FILE" ]; then
+    echo "Initializing queue database..."
+    bash "$SCRIPT_DIR/init-queue.sh"
+fi
 
 # Create workspaces directory if it doesn't exist
 mkdir -p workspaces
 
-# Check if workspace already exists
-if [ -d "$WORKSPACE_PATH" ]; then
-    echo "Error: Workspace $WORKSPACE_PATH already exists"
-    exit 1
-fi
+# Check if workspace already exists for this agent
+EXISTING_WORKSPACE=$(sqlite3 "$DB_FILE" "SELECT workspace_path FROM agents WHERE name = '$AGENT_NAME';" 2>/dev/null || echo "")
 
-echo "Creating agent workspace: $WORKSPACE_NAME"
-echo "Agent: $AGENT_NAME"
-echo "Context: $CONTEXT_DESC"
-echo ""
-
-# Clone the repository
-echo "Cloning repository..."
-git clone "$REPO_URL" "$WORKSPACE_PATH"
-
-# Navigate to workspace
-cd "$WORKSPACE_PATH"
-
-# Create initial .context.json file
-cat > .context.json <<EOF
+if [ -n "$EXISTING_WORKSPACE" ] && [ -d "$EXISTING_WORKSPACE" ]; then
+    echo "Reusing existing workspace for agent '$AGENT_NAME':"
+    echo "  $EXISTING_WORKSPACE"
+    WORKSPACE_PATH="$EXISTING_WORKSPACE"
+    WORKSPACE_NAME=$(basename "$WORKSPACE_PATH")
+    cd "$WORKSPACE_PATH"
+    REUSE_WORKSPACE=true
+    
+    # Make sure we're on main and pull latest
+    echo "Updating workspace..."
+    git checkout main 2>/dev/null || git checkout -b main 2>/dev/null || true
+    git pull origin main 2>/dev/null || true
+else
+    # Generate unique workspace name with timestamp
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    WORKSPACE_NAME="agent_${AGENT_NAME}_${TIMESTAMP}"
+    WORKSPACE_PATH="workspaces/${WORKSPACE_NAME}"
+    REUSE_WORKSPACE=false
+    
+    echo "Creating agent workspace: $WORKSPACE_NAME"
+    echo "Agent: $AGENT_NAME"
+    echo "Context: $CONTEXT_DESC"
+    echo ""
+    
+    # Clone the repository
+    echo "Cloning repository..."
+    git clone "$REPO_URL" "$WORKSPACE_PATH"
+    
+    # Navigate to workspace
+    cd "$WORKSPACE_PATH"
+    
+    # Create initial .context.json file
+    cat > .context.json <<EOF
 {
   "workspace_name": "$WORKSPACE_NAME",
   "agent_name": "$AGENT_NAME",
@@ -54,52 +84,52 @@ cat > .context.json <<EOF
   "created_by": "$(whoami)"
 }
 EOF
-
-# Initialize queue database if it doesn't exist
-DB_FILE="$PROJECT_ROOT/.agent-queue.db"
-if [ ! -f "$DB_FILE" ]; then
-    echo "Initializing queue database..."
-    bash "$SCRIPT_DIR/init-queue.sh"
 fi
 
-# Register the agent
+# Register the agent (or update if exists)
 echo "Registering agent in queue..."
 bash "$SCRIPT_DIR/agent-queue.sh" register "$AGENT_NAME" "$(realpath "$WORKSPACE_PATH")"
 
-# Claim a task
-echo ""
-echo "Claiming a task from queue..."
-if [ -n "$TASK_PATTERN" ]; then
-    bash "$SCRIPT_DIR/agent-queue.sh" claim "$AGENT_NAME" "$TASK_PATTERN" || {
-        echo "Warning: Could not claim task matching '$TASK_PATTERN', trying next available..."
-        bash "$SCRIPT_DIR/agent-queue.sh" claim "$AGENT_NAME" || {
-            echo "No tasks available in queue"
-            TASK_CLAIMED=false
+# Function to claim and work on a task
+work_on_task() {
+    local pattern="$1"
+    
+    echo ""
+    echo "Claiming a task from queue..."
+    if [ -n "$pattern" ]; then
+        bash "$SCRIPT_DIR/agent-queue.sh" claim "$AGENT_NAME" "$pattern" || {
+            echo "Warning: Could not claim task matching '$pattern', trying next available..."
+            bash "$SCRIPT_DIR/agent-queue.sh" claim "$AGENT_NAME" || {
+                return 1
+            }
         }
-    }
-else
-    bash "$SCRIPT_DIR/agent-queue.sh" claim "$AGENT_NAME" || {
-        echo "No tasks available in queue"
-        TASK_CLAIMED=false
-    }
-fi
-
-# Get claimed task info
-TASK_ID=$(sqlite3 "$DB_FILE" "SELECT current_task_id FROM agents WHERE name = '$AGENT_NAME';" 2>/dev/null || echo "")
-TASK_TITLE=""
-TASK_DESC=""
-BRANCH_NAME=""
-
-if [ -n "$TASK_ID" ] && [ "$TASK_ID" != "" ]; then
+    else
+        bash "$SCRIPT_DIR/agent-queue.sh" claim "$AGENT_NAME" || {
+            return 1
+        }
+    fi
+    
+    # Get claimed task info
+    TASK_ID=$(sqlite3 "$DB_FILE" "SELECT current_task_id FROM agents WHERE name = '$AGENT_NAME';" 2>/dev/null || echo "")
+    
+    if [ -z "$TASK_ID" ] || [ "$TASK_ID" = "" ]; then
+        return 1
+    fi
+    
     TASK_TITLE=$(sqlite3 "$DB_FILE" "SELECT title FROM tasks WHERE id = $TASK_ID;" 2>/dev/null || echo "")
     TASK_DESC=$(sqlite3 "$DB_FILE" "SELECT description FROM tasks WHERE id = $TASK_ID;" 2>/dev/null || echo "")
+    
+    # Make sure we're on main and pull latest before creating branch
+    cd "$WORKSPACE_PATH"
+    git checkout main 2>/dev/null || true
+    git pull origin main 2>/dev/null || true
     
     # Create feature branch name from task title
     BRANCH_NAME=$(echo "$TASK_TITLE" | sed 's/^[^:]*: //' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g' | cut -c1-50)
     BRANCH_NAME="feature/${AGENT_NAME}-${BRANCH_NAME}"
     
     echo "Creating feature branch: $BRANCH_NAME"
-    git checkout -b "$BRANCH_NAME"
+    git checkout -b "$BRANCH_NAME" 2>/dev/null || git checkout "$BRANCH_NAME" 2>/dev/null || true
     
     # Update .context.json with task and branch info
     if command -v jq &> /dev/null; then
@@ -148,7 +178,7 @@ This task is part of the agent queue system. The task has been claimed and assig
 ## Instructions
 
 1. **Read agent-instructions** - Review the \`/agent-instructions\` command to understand the workflow
-2. **Review relevant commands** - Check \`.cursor/commands/\` directory for any commands related to this task type (e.g., if this is a RESEARCH task, look for research-related commands)
+2. **Review relevant commands** - Check \`.cursor/commands/\` directory for any commands related to this task type
 3. **Work in this workspace** - All changes must be made in this workspace: \`$WORKSPACE_PATH\`
    - **CRITICAL**: Do not modify files outside this workspace
 4. **Complete the task** - Work on: $TASK_TITLE
@@ -167,43 +197,8 @@ This task is part of the agent queue system. The task has been claimed and assig
 
 EOF
 
-    # Create a simple instruction file that points to the context file
-    WORK_INSTRUCTION_FILE=".agent-work-instruction.md"
-    cat > "$WORK_INSTRUCTION_FILE" <<EOF
-# Agent Work Instruction
-
-**Agent:** $AGENT_NAME
-
-## Start Here
-
-Read the task context file: **\`.task-context.md\`**
-
-This file contains all the details about your current task, including:
-- Task description and context
-- Instructions on what to do
-- How to complete and submit your work
-
-## Quick Start
-
-1. Read \`.task-context.md\` for full task details
-2. Review \`/agent-instructions\` command for workflow
-3. Check \`.cursor/commands/\` for relevant commands
-4. Work on the task in this workspace
-5. When done, run: \`cd $PROJECT_ROOT && ./scripts/commit-and-pr.sh $WORKSPACE_NAME\`
-
-EOF
-
-    echo ""
-    echo "✓ Agent workspace created and task claimed!"
-    echo "  Location: $WORKSPACE_PATH"
-    echo "  Agent: $AGENT_NAME"
-    echo "  Task: $TASK_TITLE"
-    echo "  Branch: $BRANCH_NAME"
-    echo ""
-    echo "Invoking Cursor agent to work on task..."
-    
     # Create a direct agent instruction file that will trigger work
-    AGENT_START_FILE="$WORKSPACE_PATH/START-WORK.md"
+    AGENT_START_FILE="START-WORK.md"
     cat > "$AGENT_START_FILE" <<EOF
 # START WORK NOW - Agent Task Execution
 
@@ -230,46 +225,83 @@ You are agent **$AGENT_NAME**. You MUST complete this task NOW.
 
 EOF
 
+    echo ""
+    echo "✓ Task claimed and workspace ready!"
+    echo "  Agent: $AGENT_NAME"
+    echo "  Task: $TASK_TITLE"
+    echo "  Branch: $BRANCH_NAME"
+    echo ""
+    echo "Invoking Cursor agent to work on task..."
+    
     # Open workspace in Cursor - agent will see START-WORK.md and begin
+    ABS_WORKSPACE_PATH="$(pwd)"
     if command -v cursor &> /dev/null; then
         echo "Opening workspace in Cursor and starting agent..."
-        cursor "$WORKSPACE_PATH" "$AGENT_START_FILE" 2>/dev/null || true
+        cursor "$ABS_WORKSPACE_PATH" "$AGENT_START_FILE" 2>/dev/null || true
         echo "✓ Workspace opened - Agent should now be working"
     else
         echo "Error: Cursor CLI not found. Cannot invoke agent."
-        echo "Install Cursor CLI or open manually: cursor $WORKSPACE_PATH"
-        exit 1
+        echo "Install Cursor CLI or open manually: cursor $ABS_WORKSPACE_PATH"
+        return 1
     fi
     
+    return 0
+}
+
+# Main execution
+if [ "$LOOP_MODE" = true ]; then
+    echo "Starting agent in loop mode - watching for new tasks..."
+    echo "Agent: $AGENT_NAME"
+    echo "Press Ctrl+C to stop"
+    echo ""
+    
+    while true; do
+        # Check if agent has a current task
+        CURRENT_TASK=$(sqlite3 "$DB_FILE" "SELECT current_task_id FROM agents WHERE name = '$AGENT_NAME';" 2>/dev/null || echo "")
+        
+        if [ -z "$CURRENT_TASK" ] || [ "$CURRENT_TASK" = "" ]; then
+            # No current task, try to claim one
+            echo "[$(date '+%H:%M:%S')] Checking for available tasks..."
+            
+            if work_on_task "$TASK_PATTERN"; then
+                echo "[$(date '+%H:%M:%S')] Task claimed, agent working..."
+                # Wait for task to complete (check every 30 seconds)
+                while true; do
+                    sleep 30
+                    TASK_STATUS=$(sqlite3 "$DB_FILE" "
+                        SELECT t.status FROM tasks t
+                        JOIN agents a ON t.id = a.current_task_id
+                        WHERE a.name = '$AGENT_NAME';
+                    " 2>/dev/null || echo "")
+                    
+                    if [ "$TASK_STATUS" = "completed" ] || [ "$TASK_STATUS" = "failed" ] || [ "$TASK_STATUS" = "cancelled" ]; then
+                        echo "[$(date '+%H:%M:%S')] Task $TASK_STATUS, looking for next task..."
+                        break
+                    fi
+                    
+                    # Update heartbeat
+                    bash "$SCRIPT_DIR/agent-queue.sh" heartbeat "$AGENT_NAME" "Working on task" 2>/dev/null || true
+                done
+            else
+                echo "[$(date '+%H:%M:%S')] No tasks available, waiting 60 seconds..."
+                sleep 60
+            fi
+        else
+            # Has a task, just update heartbeat and wait
+            bash "$SCRIPT_DIR/agent-queue.sh" heartbeat "$AGENT_NAME" "Waiting for task completion" 2>/dev/null || true
+            sleep 30
+        fi
+    done
 else
-    # No task claimed, create default branch
-    BRANCH_NAME="feature/${AGENT_NAME}-work"
-    echo "Creating default feature branch: $BRANCH_NAME"
-    git checkout -b "$BRANCH_NAME"
-    
-    # Update .context.json with branch info
-    if command -v jq &> /dev/null; then
-        jq ". + {
-            \"branch_name\": \"$BRANCH_NAME\"
-        }" .context.json > .context.json.tmp && mv .context.json.tmp .context.json
+    # Single task mode
+    if work_on_task "$TASK_PATTERN"; then
+        echo ""
+        echo "✓ Agent is working on task"
     else
-        python3 <<PYTHON
-import json
-with open('.context.json', 'r') as f:
-    data = json.load(f)
-data['branch_name'] = "$BRANCH_NAME"
-with open('.context.json', 'w') as f:
-    json.dump(data, f, indent=2)
-PYTHON
+        echo ""
+        echo "No tasks available in queue"
+        echo "To claim a task later:"
+        echo "  cd $PROJECT_ROOT"
+        echo "  ./scripts/agent-queue.sh claim $AGENT_NAME"
     fi
-    
-    echo ""
-    echo "✓ Agent workspace created (no task claimed)"
-    echo "  Location: $WORKSPACE_PATH"
-    echo "  Agent: $AGENT_NAME"
-    echo "  Branch: $BRANCH_NAME"
-    echo ""
-    echo "To claim a task:"
-    echo "  cd $PROJECT_ROOT"
-    echo "  ./scripts/agent-queue.sh claim $AGENT_NAME"
 fi
