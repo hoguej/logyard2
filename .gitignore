@@ -10,6 +10,7 @@ Desktop.ini
 
 # Editor and IDE Files
 .vscode/
+!.vscode/tasks.json
 .idea/
 *.swp
 *.swo
@@ -100,3 +101,14 @@ Pipfile.lock
 # Local configuration
 config.local.*
 *.local
+
+# Workspace context
+.context.json
+
+# Workspaces (cloned repositories)
+workspaces/
+!workspaces/.gitkeep
+
+# Junk files (AI-generated files moved here)
+junk/
+**/junk/
