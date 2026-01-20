@@ -1,0 +1,1481 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2026-01-20",
+    "description": "Multi-queue system implementation plan with all work items ordered by priority"
+  },
+  "work_items": [
+    {
+      "id": "DB-001",
+      "file": "00-overview-work-items.md",
+      "title": "Create queues table",
+      "status": "completed",
+      "priority": 1,
+      "category": "database"
+    },
+    {
+      "id": "DB-002",
+      "file": "00-overview-work-items.md",
+      "title": "Create queue_tasks table",
+      "status": "completed",
+      "priority": 2,
+      "category": "database"
+    },
+    {
+      "id": "DB-003",
+      "file": "00-overview-work-items.md",
+      "title": "Create queue_agents table",
+      "status": "completed",
+      "priority": 3,
+      "category": "database"
+    },
+    {
+      "id": "DB-004",
+      "file": "00-overview-work-items.md",
+      "title": "Create announcements table",
+      "status": "completed",
+      "priority": 4,
+      "category": "database"
+    },
+    {
+      "id": "DB-005",
+      "file": "00-overview-work-items.md",
+      "title": "Add queue_type field to tasks table",
+      "status": "completed",
+      "priority": 5,
+      "category": "database"
+    },
+    {
+      "id": "DB-006",
+      "file": "00-overview-work-items.md",
+      "title": "Add queue_preferences field to agents table",
+      "status": "completed",
+      "priority": 6,
+      "category": "database"
+    },
+    {
+      "id": "DB-007",
+      "file": "00-overview-work-items.md",
+      "title": "Add traceability fields to tasks table",
+      "status": "completed",
+      "priority": 7,
+      "category": "database"
+    },
+    {
+      "id": "PROC-001",
+      "file": "00-overview-work-items.md",
+      "title": "Design process lifecycle management",
+      "status": "completed",
+      "priority": 8,
+      "category": "design"
+    },
+    {
+      "id": "PROC-002",
+      "file": "00-overview-work-items.md",
+      "title": "Design concurrency model",
+      "status": "completed",
+      "priority": 9,
+      "category": "design"
+    },
+    {
+      "id": "PROC-003",
+      "file": "00-overview-work-items.md",
+      "title": "Design error recovery",
+      "status": "completed",
+      "priority": 10,
+      "category": "design"
+    },
+    {
+      "id": "PROC-004",
+      "file": "00-overview-work-items.md",
+      "title": "Design monitoring and observability",
+      "status": "completed",
+      "priority": 11,
+      "category": "design"
+    },
+    {
+      "id": "WF-001",
+      "file": "00-overview-work-items.md",
+      "title": "Design automatic task routing",
+      "status": "completed",
+      "priority": 12,
+      "category": "design"
+    },
+    {
+      "id": "WF-002",
+      "file": "00-overview-work-items.md",
+      "title": "Design workspace lifecycle management",
+      "status": "completed",
+      "priority": 13,
+      "category": "design"
+    },
+    {
+      "id": "LIB-001",
+      "file": "00-overview-work-items.md",
+      "title": "Create shared queue library script",
+      "status": "completed",
+      "priority": 14,
+      "category": "library"
+    },
+    {
+      "id": "LIB-002",
+      "file": "00-overview-work-items.md",
+      "title": "Implement atomic task claiming",
+      "status": "completed",
+      "priority": 15,
+      "category": "library"
+    },
+    {
+      "id": "LIB-003",
+      "file": "00-overview-work-items.md",
+      "title": "Implement status management",
+      "status": "completed",
+      "priority": 16,
+      "category": "library"
+    },
+    {
+      "id": "LIB-004",
+      "file": "00-overview-work-items.md",
+      "title": "Implement heartbeat management",
+      "status": "completed",
+      "priority": 17,
+      "category": "library"
+    },
+    {
+      "id": "LIB-005",
+      "file": "00-overview-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "completed",
+      "priority": 18,
+      "category": "library"
+    },
+    {
+      "id": "LIB-006",
+      "file": "00-overview-work-items.md",
+      "title": "Implement modification date monitoring",
+      "status": "completed",
+      "priority": 19,
+      "category": "library"
+    },
+    {
+      "id": "LIB-007",
+      "file": "00-overview-work-items.md",
+      "title": "Implement graceful shutdown handler",
+      "status": "completed",
+      "priority": 20,
+      "category": "library"
+    },
+    {
+      "id": "ANN-08-001",
+      "file": "08-announce-work-items.md",
+      "title": "Create announcement processor",
+      "status": "completed",
+      "priority": 21,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-002",
+      "file": "08-announce-work-items.md",
+      "title": "Implement announcement display methods",
+      "status": "completed",
+      "priority": 22,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-003",
+      "file": "08-announce-work-items.md",
+      "title": "Implement response handling",
+      "status": "completed",
+      "priority": 23,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-004",
+      "file": "08-announce-work-items.md",
+      "title": "Implement error escalation",
+      "status": "completed",
+      "priority": 24,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-005",
+      "file": "08-announce-work-items.md",
+      "title": "Implement work-taken announcements",
+      "status": "completed",
+      "priority": 25,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-006",
+      "file": "08-announce-work-items.md",
+      "title": "Implement work-completed announcements",
+      "status": "completed",
+      "priority": 26,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-007",
+      "file": "08-announce-work-items.md",
+      "title": "Implement error announcements",
+      "status": "completed",
+      "priority": 27,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-008",
+      "file": "08-announce-work-items.md",
+      "title": "Implement question announcements",
+      "status": "completed",
+      "priority": 28,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-009",
+      "file": "08-announce-work-items.md",
+      "title": "Implement status announcements",
+      "status": "completed",
+      "priority": 29,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-010",
+      "file": "08-announce-work-items.md",
+      "title": "Implement structured event logging",
+      "status": "completed",
+      "priority": 30,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-011",
+      "file": "08-announce-work-items.md",
+      "title": "Implement heartbeat mechanism",
+      "status": "completed",
+      "priority": 31,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-012",
+      "file": "08-announce-work-items.md",
+      "title": "Implement batched processing",
+      "status": "completed",
+      "priority": 32,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-013",
+      "file": "08-announce-work-items.md",
+      "title": "Implement contextual information",
+      "status": "completed",
+      "priority": 33,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-014",
+      "file": "08-announce-work-items.md",
+      "title": "Implement structured format",
+      "status": "completed",
+      "priority": 34,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-015",
+      "file": "08-announce-work-items.md",
+      "title": "Implement priority-based delivery",
+      "status": "completed",
+      "priority": 35,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-016",
+      "file": "08-announce-work-items.md",
+      "title": "Implement question handling best practices",
+      "status": "completed",
+      "priority": 36,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-017",
+      "file": "08-announce-work-items.md",
+      "title": "Implement state persistence",
+      "status": "completed",
+      "priority": 37,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-018",
+      "file": "08-announce-work-items.md",
+      "title": "Implement uncertainty thresholds",
+      "status": "completed",
+      "priority": 38,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-019",
+      "file": "08-announce-work-items.md",
+      "title": "Implement comprehensive error context",
+      "status": "completed",
+      "priority": 39,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-020",
+      "file": "08-announce-work-items.md",
+      "title": "Implement error categorization",
+      "status": "completed",
+      "priority": 40,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-021",
+      "file": "08-announce-work-items.md",
+      "title": "Implement fix task linking",
+      "status": "completed",
+      "priority": 41,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-022",
+      "file": "08-announce-work-items.md",
+      "title": "Implement progress tracking",
+      "status": "completed",
+      "priority": 42,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-023",
+      "file": "08-announce-work-items.md",
+      "title": "Implement success metrics",
+      "status": "completed",
+      "priority": 43,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-024",
+      "file": "08-announce-work-items.md",
+      "title": "Implement TL;DR summaries",
+      "status": "completed",
+      "priority": 44,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-025",
+      "file": "08-announce-work-items.md",
+      "title": "Implement event-driven logging",
+      "status": "completed",
+      "priority": 45,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-026",
+      "file": "08-announce-work-items.md",
+      "title": "Implement audit trail",
+      "status": "completed",
+      "priority": 46,
+      "category": "announce"
+    },
+    {
+      "id": "ANN-08-027",
+      "file": "08-announce-work-items.md",
+      "title": "Implement performance optimization",
+      "status": "completed",
+      "priority": 47,
+      "category": "announce"
+    },
+    {
+      "id": "WF-003",
+      "file": "00-overview-work-items.md",
+      "title": "Implement /create-work command",
+      "status": "completed",
+      "priority": 48,
+      "category": "workflow"
+    },
+    {
+      "id": "WF-004",
+      "file": "00-overview-work-items.md",
+      "title": "Implement traceability linking",
+      "status": "completed",
+      "priority": 48,
+      "category": "workflow"
+    },
+    {
+      "id": "WF-005",
+      "file": "00-overview-work-items.md",
+      "title": "Implement root work item tracking",
+      "status": "completed",
+      "priority": 49,
+      "category": "workflow"
+    },
+    {
+      "id": "MILESTONE-001",
+      "file": "00-overview-work-items.md",
+      "title": "Work item creation feature complete",
+      "status": "completed",
+      "priority": 49,
+      "category": "milestone"
+    },
+    {
+      "id": "WF-006",
+      "file": "00-overview-work-items.md",
+      "title": "Implement traceability query functions",
+      "status": "completed",
+      "priority": 51,
+      "category": "workflow"
+    },
+    {
+      "id": "WF-007",
+      "file": "00-overview-work-items.md",
+      "title": "Implement root work item status management",
+      "status": "completed",
+      "priority": 52,
+      "category": "workflow"
+    },
+    {
+      "id": "WF-008",
+      "file": "00-overview-work-items.md",
+      "title": "Implement root work item status query functions",
+      "status": "completed",
+      "priority": 53,
+      "category": "workflow"
+    },
+    {
+      "id": "WF-009",
+      "file": "00-overview-work-items.md",
+      "title": "Integrate status updates into workflow",
+      "status": "completed",
+      "priority": 54,
+      "category": "workflow"
+    },
+    {
+      "id": "AGENT-01-001",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Create agent-requirements-research.sh script",
+      "status": "pending",
+      "priority": 56,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-002",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 57,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-003",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 58,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-004",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement research workflow",
+      "status": "pending",
+      "priority": 59,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-005",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement requirements document creation",
+      "status": "pending",
+      "priority": 60,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-006",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement clarifying questions handling",
+      "status": "pending",
+      "priority": 61,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-007",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement automatic queuing to planning",
+      "status": "pending",
+      "priority": 62,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-008",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 63,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-01-009",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 64,
+      "category": "agent"
+    },
+    {
+      "id": "MILESTONE-002",
+      "file": "00-overview-work-items.md",
+      "title": "Requirements research feature complete",
+      "status": "pending",
+      "priority": 64,
+      "category": "milestone"
+    },
+    {
+      "id": "RESEARCH-01-001",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement multi-stage synthesis strategy",
+      "status": "pending",
+      "priority": 65,
+      "category": "best-practices"
+    },
+    {
+      "id": "RESEARCH-01-002",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement source cross-referencing",
+      "status": "pending",
+      "priority": 67,
+      "category": "best-practices"
+    },
+    {
+      "id": "RESEARCH-01-003",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement contextual RAG",
+      "status": "pending",
+      "priority": 68,
+      "category": "best-practices"
+    },
+    {
+      "id": "RESEARCH-01-004",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement reflection loop",
+      "status": "pending",
+      "priority": 69,
+      "category": "best-practices"
+    },
+    {
+      "id": "RESEARCH-01-005",
+      "file": "01-requirements-research-work-items.md",
+      "title": "Implement source citation",
+      "status": "pending",
+      "priority": 70,
+      "category": "best-practices"
+    },
+    {
+      "id": "AGENT-02-001",
+      "file": "02-planning-work-items.md",
+      "title": "Create agent-planning.sh script",
+      "status": "pending",
+      "priority": 71,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-002",
+      "file": "02-planning-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 72,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-003",
+      "file": "02-planning-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 73,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-004",
+      "file": "02-planning-work-items.md",
+      "title": "Implement requirements document reading",
+      "status": "pending",
+      "priority": 74,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-005",
+      "file": "02-planning-work-items.md",
+      "title": "Implement task breakdown logic",
+      "status": "pending",
+      "priority": 75,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-006",
+      "file": "02-planning-work-items.md",
+      "title": "Implement task detailing",
+      "status": "pending",
+      "priority": 76,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-007",
+      "file": "02-planning-work-items.md",
+      "title": "Implement dependency graph creation",
+      "status": "pending",
+      "priority": 77,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-008",
+      "file": "02-planning-work-items.md",
+      "title": "Implement execution task creation",
+      "status": "pending",
+      "priority": 78,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-009",
+      "file": "02-planning-work-items.md",
+      "title": "Implement planning document creation",
+      "status": "pending",
+      "priority": 79,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-02-010",
+      "file": "02-planning-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 80,
+      "category": "agent"
+    },
+    {
+      "id": "MILESTONE-003",
+      "file": "00-overview-work-items.md",
+      "title": "Task planning feature complete",
+      "status": "pending",
+      "priority": 80,
+      "category": "milestone"
+    },
+    {
+      "id": "AGENT-02-011",
+      "file": "02-planning-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 81,
+      "category": "agent"
+    },
+    {
+      "id": "PLAN-02-001",
+      "file": "02-planning-work-items.md",
+      "title": "Implement INVEST principle validation",
+      "status": "pending",
+      "priority": 82,
+      "category": "best-practices"
+    },
+    {
+      "id": "PLAN-02-002",
+      "file": "02-planning-work-items.md",
+      "title": "Implement atomic tasking",
+      "status": "pending",
+      "priority": 84,
+      "category": "best-practices"
+    },
+    {
+      "id": "PLAN-02-003",
+      "file": "02-planning-work-items.md",
+      "title": "Implement dependency mapping",
+      "status": "pending",
+      "priority": 85,
+      "category": "best-practices"
+    },
+    {
+      "id": "PLAN-02-004",
+      "file": "02-planning-work-items.md",
+      "title": "Implement parallelism identification",
+      "status": "pending",
+      "priority": 86,
+      "category": "best-practices"
+    },
+    {
+      "id": "PLAN-02-005",
+      "file": "02-planning-work-items.md",
+      "title": "Implement depth limit",
+      "status": "pending",
+      "priority": 87,
+      "category": "best-practices"
+    },
+    {
+      "id": "PLAN-02-006",
+      "file": "02-planning-work-items.md",
+      "title": "Implement sanity check",
+      "status": "pending",
+      "priority": 88,
+      "category": "best-practices"
+    },
+    {
+      "id": "PLAN-02-007",
+      "file": "02-planning-work-items.md",
+      "title": "Implement priority aging",
+      "status": "pending",
+      "priority": 89,
+      "category": "best-practices"
+    },
+    {
+      "id": "AGENT-03-001",
+      "file": "03-execution-work-items.md",
+      "title": "Create agent-execution.sh script",
+      "status": "pending",
+      "priority": 90,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-002",
+      "file": "03-execution-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 91,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-003",
+      "file": "03-execution-work-items.md",
+      "title": "Implement dependency checking",
+      "status": "pending",
+      "priority": 92,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-004",
+      "file": "03-execution-work-items.md",
+      "title": "Implement workspace creation",
+      "status": "pending",
+      "priority": 93,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-005",
+      "file": "03-execution-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 94,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-006",
+      "file": "03-execution-work-items.md",
+      "title": "Implement code execution workflow",
+      "status": "pending",
+      "priority": 95,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-007",
+      "file": "03-execution-work-items.md",
+      "title": "Implement self-review process",
+      "status": "pending",
+      "priority": 96,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-008",
+      "file": "03-execution-work-items.md",
+      "title": "Implement automatic queuing to pre-commit-check",
+      "status": "pending",
+      "priority": 97,
+      "category": "agent"
+    },
+    {
+      "id": "MILESTONE-004",
+      "file": "00-overview-work-items.md",
+      "title": "Code execution feature complete",
+      "status": "pending",
+      "priority": 97,
+      "category": "milestone"
+    },
+    {
+      "id": "AGENT-03-009",
+      "file": "03-execution-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 98,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-03-010",
+      "file": "03-execution-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 99,
+      "category": "agent"
+    },
+    {
+      "id": "EXEC-03-001",
+      "file": "03-execution-work-items.md",
+      "title": "Implement idempotency patterns",
+      "status": "pending",
+      "priority": 100,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-002",
+      "file": "03-execution-work-items.md",
+      "title": "Implement self-documentation",
+      "status": "pending",
+      "priority": 102,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-003",
+      "file": "03-execution-work-items.md",
+      "title": "Implement modular construction",
+      "status": "pending",
+      "priority": 103,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-004",
+      "file": "03-execution-work-items.md",
+      "title": "Implement strict scoping",
+      "status": "pending",
+      "priority": 104,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-005",
+      "file": "03-execution-work-items.md",
+      "title": "Implement code quality standards",
+      "status": "pending",
+      "priority": 105,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-006",
+      "file": "03-execution-work-items.md",
+      "title": "Implement comprehensive error handling",
+      "status": "pending",
+      "priority": 106,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-007",
+      "file": "03-execution-work-items.md",
+      "title": "Implement testing requirements",
+      "status": "pending",
+      "priority": 107,
+      "category": "best-practices"
+    },
+    {
+      "id": "EXEC-03-008",
+      "file": "03-execution-work-items.md",
+      "title": "Implement documentation updates",
+      "status": "pending",
+      "priority": 108,
+      "category": "best-practices"
+    },
+    {
+      "id": "AGENT-04-001",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Create agent-pre-commit-check.sh script",
+      "status": "pending",
+      "priority": 109,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-002",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 110,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-003",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement workspace loading",
+      "status": "pending",
+      "priority": 111,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-004",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 112,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-005",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement quality check execution",
+      "status": "pending",
+      "priority": 113,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-006",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement check result analysis",
+      "status": "pending",
+      "priority": 114,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-007",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement fix task creation",
+      "status": "pending",
+      "priority": 115,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-008",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement automatic queuing to commit-build",
+      "status": "pending",
+      "priority": 116,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-009",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 117,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-04-010",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 118,
+      "category": "agent"
+    },
+    {
+      "id": "CHECK-04-001",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement comprehensive check suite",
+      "status": "pending",
+      "priority": 119,
+      "category": "best-practices"
+    },
+    {
+      "id": "CHECK-04-002",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement environment isolation",
+      "status": "pending",
+      "priority": 120,
+      "category": "best-practices"
+    },
+    {
+      "id": "CHECK-04-003",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement error categorization",
+      "status": "pending",
+      "priority": 121,
+      "category": "best-practices"
+    },
+    {
+      "id": "CHECK-04-004",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement fix task creation best practices",
+      "status": "pending",
+      "priority": 122,
+      "category": "best-practices"
+    },
+    {
+      "id": "CHECK-04-005",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement retry and escalation logic",
+      "status": "pending",
+      "priority": 123,
+      "category": "best-practices"
+    },
+    {
+      "id": "CHECK-04-006",
+      "file": "04-pre-commit-check-work-items.md",
+      "title": "Implement quality gates",
+      "status": "pending",
+      "priority": 124,
+      "category": "best-practices"
+    },
+    {
+      "id": "AGENT-05-001",
+      "file": "05-commit-build-work-items.md",
+      "title": "Create agent-commit-build.sh script",
+      "status": "pending",
+      "priority": 125,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-002",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 126,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-003",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement workspace loading",
+      "status": "pending",
+      "priority": 127,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-004",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 128,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-005",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement commit workflow",
+      "status": "pending",
+      "priority": 129,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-006",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement push workflow",
+      "status": "pending",
+      "priority": 130,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-007",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement PR creation",
+      "status": "pending",
+      "priority": 131,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-008",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement build monitoring",
+      "status": "pending",
+      "priority": 132,
+      "category": "agent"
+    },
+    {
+      "id": "MILESTONE-005",
+      "file": "00-overview-work-items.md",
+      "title": "Commit and PR feature complete",
+      "status": "pending",
+      "priority": 132,
+      "category": "milestone"
+    },
+    {
+      "id": "AGENT-05-009",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement build result handling",
+      "status": "pending",
+      "priority": 133,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-010",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 134,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-05-011",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 135,
+      "category": "agent"
+    },
+    {
+      "id": "COMMIT-05-001",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement meaningful commit messages",
+      "status": "pending",
+      "priority": 136,
+      "category": "best-practices"
+    },
+    {
+      "id": "COMMIT-05-002",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement atomic commits",
+      "status": "pending",
+      "priority": 138,
+      "category": "best-practices"
+    },
+    {
+      "id": "COMMIT-05-003",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement comprehensive PR descriptions",
+      "status": "pending",
+      "priority": 139,
+      "category": "best-practices"
+    },
+    {
+      "id": "COMMIT-05-004",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement build monitoring best practices",
+      "status": "pending",
+      "priority": 140,
+      "category": "best-practices"
+    },
+    {
+      "id": "COMMIT-05-005",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement build error analysis",
+      "status": "pending",
+      "priority": 141,
+      "category": "best-practices"
+    },
+    {
+      "id": "COMMIT-05-006",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement fix task creation for build failures",
+      "status": "pending",
+      "priority": 142,
+      "category": "best-practices"
+    },
+    {
+      "id": "COMMIT-05-007",
+      "file": "05-commit-build-work-items.md",
+      "title": "Implement conflict resolution",
+      "status": "pending",
+      "priority": 143,
+      "category": "best-practices"
+    },
+    {
+      "id": "AGENT-06-001",
+      "file": "06-deploy-work-items.md",
+      "title": "Create agent-deploy.sh script",
+      "status": "pending",
+      "priority": 144,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-002",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 145,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-003",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 146,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-004",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement PR status checking",
+      "status": "pending",
+      "priority": 147,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-005",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement PR merge workflow",
+      "status": "pending",
+      "priority": 148,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-006",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement deployment monitoring",
+      "status": "pending",
+      "priority": 149,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-007",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement smoke tests",
+      "status": "pending",
+      "priority": 150,
+      "category": "agent"
+    },
+    {
+      "id": "MILESTONE-006",
+      "file": "00-overview-work-items.md",
+      "title": "Full workflow feature complete",
+      "status": "pending",
+      "priority": 150,
+      "category": "milestone"
+    },
+    {
+      "id": "AGENT-06-008",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement deployment result handling",
+      "status": "pending",
+      "priority": 151,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-009",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement workspace destruction",
+      "status": "pending",
+      "priority": 152,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-010",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 153,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-06-011",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 154,
+      "category": "agent"
+    },
+    {
+      "id": "DEPLOY-06-001",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement staged deployment",
+      "status": "pending",
+      "priority": 155,
+      "category": "best-practices"
+    },
+    {
+      "id": "DEPLOY-06-002",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement health checks",
+      "status": "pending",
+      "priority": 157,
+      "category": "best-practices"
+    },
+    {
+      "id": "DEPLOY-06-003",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement comprehensive monitoring",
+      "status": "pending",
+      "priority": 158,
+      "category": "best-practices"
+    },
+    {
+      "id": "DEPLOY-06-004",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement rollback strategy",
+      "status": "pending",
+      "priority": 159,
+      "category": "best-practices"
+    },
+    {
+      "id": "DEPLOY-06-005",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement fix task creation for deployment failures",
+      "status": "pending",
+      "priority": 160,
+      "category": "best-practices"
+    },
+    {
+      "id": "DEPLOY-06-006",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement merge strategy selection",
+      "status": "pending",
+      "priority": 161,
+      "category": "best-practices"
+    },
+    {
+      "id": "DEPLOY-06-007",
+      "file": "06-deploy-work-items.md",
+      "title": "Implement log collection",
+      "status": "pending",
+      "priority": 162,
+      "category": "best-practices"
+    },
+    {
+      "id": "AGENT-07-001",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Create agent-e2e-test.sh script",
+      "status": "pending",
+      "priority": 163,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-002",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement task claiming logic",
+      "status": "pending",
+      "priority": 164,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-003",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement Cursor agent invocation",
+      "status": "pending",
+      "priority": 165,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-004",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement deployment readiness check",
+      "status": "pending",
+      "priority": 166,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-005",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement E2E test execution",
+      "status": "pending",
+      "priority": 167,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-006",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement test result analysis",
+      "status": "pending",
+      "priority": 168,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-007",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement fix task creation",
+      "status": "pending",
+      "priority": 169,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-008",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement announcement creation",
+      "status": "pending",
+      "priority": 170,
+      "category": "agent"
+    },
+    {
+      "id": "AGENT-07-009",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement error handling",
+      "status": "pending",
+      "priority": 171,
+      "category": "agent"
+    },
+    {
+      "id": "E2E-07-001",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement comprehensive test suite",
+      "status": "pending",
+      "priority": 172,
+      "category": "best-practices"
+    },
+    {
+      "id": "E2E-07-002",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement test environment setup",
+      "status": "pending",
+      "priority": 173,
+      "category": "best-practices"
+    },
+    {
+      "id": "E2E-07-003",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement test isolation",
+      "status": "pending",
+      "priority": 174,
+      "category": "best-practices"
+    },
+    {
+      "id": "E2E-07-004",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement failure analysis",
+      "status": "pending",
+      "priority": 175,
+      "category": "best-practices"
+    },
+    {
+      "id": "E2E-07-005",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement retry and flaky test handling",
+      "status": "pending",
+      "priority": 176,
+      "category": "best-practices"
+    },
+    {
+      "id": "E2E-07-006",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement test data management",
+      "status": "pending",
+      "priority": 177,
+      "category": "best-practices"
+    },
+    {
+      "id": "E2E-07-007",
+      "file": "07-e2e-test-work-items.md",
+      "title": "Implement re-run after fixes",
+      "status": "pending",
+      "priority": 178,
+      "category": "best-practices"
+    },
+    {
+      "id": "MIG-001",
+      "file": "00-overview-work-items.md",
+      "title": "Audit existing queue system",
+      "status": "pending",
+      "priority": 179,
+      "category": "migration"
+    },
+    {
+      "id": "MIG-002",
+      "file": "00-overview-work-items.md",
+      "title": "Migrate existing tasks to new queue system",
+      "status": "pending",
+      "priority": 180,
+      "category": "migration"
+    },
+    {
+      "id": "MIG-003",
+      "file": "00-overview-work-items.md",
+      "title": "Update existing scripts to use new queue system",
+      "status": "pending",
+      "priority": 181,
+      "category": "migration"
+    },
+    {
+      "id": "MIG-004",
+      "file": "00-overview-work-items.md",
+      "title": "Remove old queue system code",
+      "status": "pending",
+      "priority": 182,
+      "category": "migration"
+    },
+    {
+      "id": "MIG-005",
+      "file": "00-overview-work-items.md",
+      "title": "Update queue-status script for multi-queue system",
+      "status": "pending",
+      "priority": 183,
+      "category": "migration"
+    },
+    {
+      "id": "MIG-006",
+      "file": "00-overview-work-items.md",
+      "title": "Create queue monitoring dashboard",
+      "status": "pending",
+      "priority": 184,
+      "category": "migration"
+    }
+  ]
+}

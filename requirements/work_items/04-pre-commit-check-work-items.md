@@ -12,6 +12,7 @@
 - Use shared library for atomic task claiming
 - Claim from pre-commit-check queue only
 - Handle no tasks available case
+- Update root work item status to 'checking' when task is claimed
 
 ### AGENT-04-003: Implement workspace loading
 - Read workspace path from task context
@@ -43,11 +44,17 @@
 - Link back to original execution task
 - Set appropriate priorities
 - Include error context (messages, stack traces, file paths)
+- Set parent_task_id to current pre-commit-check task
+- Preserve root_work_item_id from pre-commit-check task
+- Update work_item_chain with pre-commit-check task ID
 
 ### AGENT-04-008: Implement automatic queuing to commit-build
 - If all checks pass, automatically queue to commit-build
 - Pass workspace path in task context
 - Link to original execution task
+- Set parent_task_id to current pre-commit-check task
+- Preserve root_work_item_id from pre-commit-check task
+- Update work_item_chain with pre-commit-check task ID
 
 ### AGENT-04-009: Implement announcement creation
 - Announce work start via announce queue

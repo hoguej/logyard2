@@ -12,6 +12,9 @@
 - Use shared library for atomic task claiming
 - Claim from deploy queue only
 - Handle no tasks available case
+- Update root work item status to 'deploying' when task is claimed
+- Update root work item status to 'completed' when deployment succeeds
+- Update root work item status to 'failed' when deployment fails
 
 ### AGENT-06-003: Implement Cursor agent invocation
 - Invoke Cursor agent to merge PR and monitor deployment
@@ -49,9 +52,15 @@
 - If deployment succeeds:
   - Destroy workspace (cleanup)
   - Optionally queue to e2e-test queue (parallel processing)
+    - Set parent_task_id to current deploy task
+    - Preserve root_work_item_id from deploy task
+    - Update work_item_chain with deploy task ID
 - If deployment fails:
   - Preserve workspace (for fix agents)
   - Create fix tasks in execution queue
+    - Set parent_task_id to current deploy task
+    - Preserve root_work_item_id from deploy task
+    - Update work_item_chain with deploy task ID
 
 ### AGENT-06-009: Implement workspace destruction
 - Read workspace path from task context

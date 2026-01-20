@@ -12,6 +12,7 @@
 - Use shared library for atomic task claiming
 - Claim from commit-build queue only
 - Handle no tasks available case
+- Update root work item status to 'building' when task is claimed
 
 ### AGENT-05-003: Implement workspace loading
 - Read workspace path from task context
@@ -55,7 +56,13 @@
 
 ### AGENT-05-009: Implement build result handling
 - If build passes: Queue to deploy queue
+  - Set parent_task_id to current commit-build task
+  - Preserve root_work_item_id from commit-build task
+  - Update work_item_chain with commit-build task ID
 - If build fails: Create fix tasks in execution queue
+  - Set parent_task_id to current commit-build task
+  - Preserve root_work_item_id from commit-build task
+  - Update work_item_chain with commit-build task ID
 - Categorize build failures (compilation, tests, lint, infrastructure, dependencies)
 - Link fix tasks to original execution task
 

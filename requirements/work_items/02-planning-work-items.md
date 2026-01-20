@@ -12,6 +12,7 @@
 - Use shared library for atomic task claiming
 - Claim from planning queue only
 - Handle no tasks available case
+- Update root work item status to 'planning' when task is claimed
 
 ### AGENT-02-003: Implement Cursor agent invocation
 - Invoke Cursor agent to perform task breakdown
@@ -51,6 +52,9 @@
 - Set proper priorities
 - Link dependencies
 - Include all task details in context
+- Set parent_task_id to current planning task
+- Preserve root_work_item_id from planning task
+- Update work_item_chain with planning task ID
 
 ### AGENT-02-009: Implement planning document creation
 - Create planning document (markdown)

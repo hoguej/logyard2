@@ -78,10 +78,37 @@ Each queue type requires its own agent script:
 - **queue_tasks**: Tasks organized by queue type
 - **queue_agents**: Agent-queue assignments
 - **announcements**: Announcement history
+- **root_work_items**: Original user requests and their status
 
 ### Modified Tables
-- **tasks**: Add `queue_type` field
+- **tasks**: Add `queue_type`, `root_work_item_id`, `parent_task_id`, `work_item_chain` fields
 - **agents**: Add `queue_preferences` field
+
+## Root Work Item Tracking
+
+### Purpose
+Track the original user request from start to finish, providing visibility into the status and progress of each feature request.
+
+### Root Work Item Lifecycle
+1. **Created**: When `/create-work` command is executed with user input
+2. **Status Tracking**: Status automatically updates as work progresses through queues:
+   - `pending` → Initial state
+   - `researching` → Requirements research in progress
+   - `planning` → Task breakdown in progress
+   - `executing` → Code implementation in progress
+   - `checking` → Pre-commit checks in progress
+   - `building` → Commit and build in progress
+   - `deploying` → Deployment in progress
+   - `testing` → E2E testing in progress (optional)
+   - `completed` → Successfully deployed
+   - `failed` → Critical failure occurred
+   - `cancelled` → Manually cancelled
+
+### Traceability
+- Every task links back to its root work item via `root_work_item_id`
+- Full task chain tracked via `work_item_chain` array
+- Parent-child relationships tracked via `parent_task_id`
+- Complete lineage from user request to final deployment
 
 ## Integration Points
 
@@ -90,6 +117,7 @@ Each queue type requires its own agent script:
 - Dependency tracking across queues
 - Status propagation
 - Error handling and escalation
+- Root work item status updates
 
 ### With External Systems
 - GitHub (PRs, commits, builds)
@@ -97,15 +125,35 @@ Each queue type requires its own agent script:
 - Test infrastructure (E2E tests)
 - Communication tools (Slack, email)
 
+## Queue Status Display
+
+### Purpose
+Provide visibility into queue status and active human inputs (root work items) being processed.
+
+### Display Requirements
+- **Queue Status**: Show status for all queue types (queued, in_progress, completed, failed counts)
+- **Active Root Work Items**: Display all human inputs currently being worked on
+- **Root Work Item Details**: For each active root work item, show:
+  - Title and description (original user request)
+  - Current status (pending, researching, planning, executing, etc.)
+  - Current queue stage (which queue it's in)
+  - Progress through workflow stages
+  - Number of tasks associated with the root work item
+  - Task breakdown by queue type
+- **Grouping**: Group tasks by root work item for better visibility
+- **Filtering**: Filter by queue type, root work item status, or specific root work item
+- **Real-time Updates**: Support watch mode for continuous monitoring
+
 ## Benefits
 
 1. **Specialization**: Agents can specialize in specific queue types
 2. **Priority Management**: Better control over task priorities per queue
 3. **Workflow Automation**: Automatic progression through queues
 4. **Error Handling**: Better error isolation and handling
-5. **Visibility**: Clear view of work at each stage
+5. **Visibility**: Clear view of work at each stage and which human inputs are being processed
 6. **Scalability**: Easy to add new queue types
 7. **Communication**: Centralized announcement system
+8. **Traceability**: Full visibility from human input to completion
 
 ## Workspace Lifecycle
 

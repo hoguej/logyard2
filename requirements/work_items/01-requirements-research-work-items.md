@@ -12,6 +12,9 @@
 - Use shared library for atomic task claiming
 - Claim from requirements-research queue only
 - Handle no tasks available case
+- Verify root_work_item_id is set from /create-work command
+- Preserve traceability when claiming
+- Update root work item status to 'researching' when task is claimed
 
 ### AGENT-01-003: Implement Cursor agent invocation
 - Invoke Cursor agent to perform research
@@ -43,6 +46,9 @@
 - After research complete, automatically queue to planning queue
 - Link researched requirements document to planning task
 - Pass all research findings in task context
+- Set parent_task_id to current research task
+- Preserve root_work_item_id from research task
+- Update work_item_chain with research task ID
 
 ### AGENT-01-008: Implement announcement creation
 - Announce work start via announce queue

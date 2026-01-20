@@ -13,6 +13,7 @@
 - Claim from execution queue only
 - Check dependencies before claiming
 - Handle no tasks available case
+- Update root work item status to 'executing' when first execution task is claimed
 
 ### AGENT-03-003: Implement dependency checking
 - Check if dependent tasks are complete
@@ -48,6 +49,9 @@
 - After execution complete, automatically queue to pre-commit-check
 - Pass workspace path in task context
 - Link to original execution task
+- Set parent_task_id to current execution task
+- Preserve root_work_item_id from execution task
+- Update work_item_chain with execution task ID
 
 ### AGENT-03-009: Implement announcement creation
 - Announce work start via announce queue

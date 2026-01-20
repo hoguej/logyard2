@@ -13,6 +13,7 @@
 - Use shared library for atomic task claiming
 - Claim from e2e-test queue only
 - Handle no tasks available case
+- Update root work item status to 'testing' when task is claimed (optional, if used)
 
 ### AGENT-07-003: Implement Cursor agent invocation
 - Invoke Cursor agent to run E2E tests against deployed environment
@@ -44,6 +45,9 @@
 - Link to original feature/task
 - Set appropriate priorities based on impact
 - Include test output and logs
+- Set parent_task_id to current e2e-test task
+- Preserve root_work_item_id from e2e-test task
+- Update work_item_chain with e2e-test task ID
 
 ### AGENT-07-008: Implement announcement creation
 - Announce test start via announce queue
