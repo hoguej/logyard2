@@ -202,27 +202,44 @@ EOF
     echo ""
     echo "Invoking Cursor agent to work on task..."
     
-    # Try to invoke Cursor to open the workspace and work instruction
+    # Create a direct agent instruction file that will trigger work
+    AGENT_START_FILE="$WORKSPACE_PATH/START-WORK.md"
+    cat > "$AGENT_START_FILE" <<EOF
+# START WORK NOW - Agent Task Execution
+
+**Agent:** $AGENT_NAME  
+**Task ID:** $TASK_ID  
+**Task:** $TASK_TITLE
+
+## IMMEDIATE INSTRUCTIONS
+
+You are agent **$AGENT_NAME**. You MUST complete this task NOW.
+
+1. **Read .task-context.md** - Contains full task details
+2. **Read /agent-instructions** - Understand the workflow  
+3. **DO THE WORK** - Complete: $TASK_TITLE
+4. **When done** - Run: \`cd $PROJECT_ROOT && ./scripts/commit-and-pr.sh $WORKSPACE_NAME\`
+
+## Task Details
+- **Title:** $TASK_TITLE
+- **Description:** $TASK_DESC
+- **Workspace:** $WORKSPACE_PATH
+- **Branch:** $BRANCH_NAME
+
+**BEGIN WORKING IMMEDIATELY. Read .task-context.md and start.**
+
+EOF
+
+    # Open workspace in Cursor - agent will see START-WORK.md and begin
     if command -v cursor &> /dev/null; then
-        echo "Opening workspace in Cursor..."
-        cursor "$WORKSPACE_PATH" "$WORK_INSTRUCTION_FILE" 2>/dev/null || {
-            echo "Note: Cursor CLI not available or workspace already open"
-        }
+        echo "Opening workspace in Cursor and starting agent..."
+        cursor "$WORKSPACE_PATH" "$AGENT_START_FILE" 2>/dev/null || true
+        echo "✓ Workspace opened - Agent should now be working"
     else
-        echo "Note: Cursor CLI not found. Open workspace manually:"
-        echo "  cursor $WORKSPACE_PATH"
+        echo "Error: Cursor CLI not found. Cannot invoke agent."
+        echo "Install Cursor CLI or open manually: cursor $WORKSPACE_PATH"
+        exit 1
     fi
-    
-    echo ""
-    echo "Task context file created: $TASK_CONTEXT_FILE"
-    echo "Agent instruction file created: $WORK_INSTRUCTION_FILE"
-    echo ""
-    echo "The Cursor agent should now:"
-    echo "  1. Read .task-context.md for full task details"
-    echo "  2. Read the agent-instructions command"
-    echo "  3. Review relevant commands in .cursor/commands/"
-    echo "  4. Work on the task: $TASK_TITLE"
-    echo "  5. When complete, run: cd $PROJECT_ROOT && ./scripts/commit-and-pr.sh $WORKSPACE_NAME"
     
 else
     # No task claimed, create default branch

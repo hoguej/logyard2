@@ -106,6 +106,7 @@ config.local.*
 .context.json
 .agent-work-instruction.md
 .task-context.md
+.agent-start.md
 
 # Workspaces (cloned repositories)
 workspaces/
