@@ -181,11 +181,23 @@ update_task_status() {
         completed_at_sql=", completed_at = CURRENT_TIMESTAMP"
     fi
     
+    # Build result and error SQL
+    local result_sql="result = NULL"
+    local error_sql="error = NULL"
+    if [ -n "$result" ]; then
+        result=$(echo "$result" | sed "s/'/''/g")
+        result_sql="result = '$result'"
+    fi
+    if [ -n "$error" ]; then
+        error=$(echo "$error" | sed "s/'/''/g")
+        error_sql="error = '$error'"
+    fi
+    
     sqlite3 "$DB_FILE" <<EOF
 UPDATE tasks
 SET status = '$new_status',
-    result = ${result:+'$result'},
-    error = ${error:+'$error'}
+    $result_sql,
+    $error_sql
     $completed_at_sql
 WHERE id = $task_id;
 
