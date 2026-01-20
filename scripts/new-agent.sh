@@ -1,24 +1,41 @@
 #!/bin/bash
 # Create a new agent workspace, register it, claim a task, and invoke Cursor agent to do the work
-# Usage: ./scripts/new-agent.sh <agent-name> [context-description] [task-title-pattern] [--loop]
+# Usage: ./scripts/new-agent.sh <agent-name> [context-description] [task-title-pattern] [--loop] [-n interval]
 
 set -e
 
 LOOP_MODE=false
+LOOP_INTERVAL=15  # Default 15 seconds
+
 # Parse arguments
 ARGS=()
-for arg in "$@"; do
-    if [ "$arg" = "--loop" ]; then
-        LOOP_MODE=true
-    else
-        ARGS+=("$arg")
-    fi
+i=0
+while [ $i -lt $# ]; do
+    arg="${!((i+1))}"
+    case "$arg" in
+        --loop)
+            LOOP_MODE=true
+            ;;
+        -n)
+            i=$((i+1))
+            LOOP_INTERVAL="${!((i+1))}"
+            if ! [[ "$LOOP_INTERVAL" =~ ^[0-9]+$ ]]; then
+                echo "Error: -n requires a numeric value"
+                exit 1
+            fi
+            ;;
+        *)
+            ARGS+=("$arg")
+            ;;
+    esac
+    i=$((i+1))
 done
 
 if [ ${#ARGS[@]} -lt 1 ]; then
-    echo "Usage: $0 <agent-name> [context-description] [task-title-pattern] [--loop]"
+    echo "Usage: $0 <agent-name> [context-description] [task-title-pattern] [--loop] [-n interval]"
     echo "Example: $0 alpha 'Working on authentication features' 'RESEARCH'"
     echo "         $0 alpha 'Working on features' --loop  (watch for new work and claim it)"
+    echo "         $0 alpha 'Working on features' --loop -n 30  (loop with 30 second interval)"
     exit 1
 fi
 
@@ -252,6 +269,7 @@ EOF
 if [ "$LOOP_MODE" = true ]; then
     echo "Starting agent in loop mode - watching for new tasks..."
     echo "Agent: $AGENT_NAME"
+    echo "Check interval: ${LOOP_INTERVAL} seconds"
     echo "Press Ctrl+C to stop"
     echo ""
     
@@ -265,9 +283,9 @@ if [ "$LOOP_MODE" = true ]; then
             
             if work_on_task "$TASK_PATTERN"; then
                 echo "[$(date '+%H:%M:%S')] Task claimed, agent working..."
-                # Wait for task to complete (check every 30 seconds)
+                # Wait for task to complete (check at loop interval)
                 while true; do
-                    sleep 30
+                    sleep "$LOOP_INTERVAL"
                     TASK_STATUS=$(sqlite3 "$DB_FILE" "
                         SELECT t.status FROM tasks t
                         JOIN agents a ON t.id = a.current_task_id
@@ -283,13 +301,13 @@ if [ "$LOOP_MODE" = true ]; then
                     bash "$SCRIPT_DIR/agent-queue.sh" heartbeat "$AGENT_NAME" "Working on task" 2>/dev/null || true
                 done
             else
-                echo "[$(date '+%H:%M:%S')] No tasks available, waiting 60 seconds..."
-                sleep 60
+                echo "[$(date '+%H:%M:%S')] No tasks available, waiting ${LOOP_INTERVAL} seconds..."
+                sleep "$LOOP_INTERVAL"
             fi
         else
             # Has a task, just update heartbeat and wait
             bash "$SCRIPT_DIR/agent-queue.sh" heartbeat "$AGENT_NAME" "Waiting for task completion" 2>/dev/null || true
-            sleep 30
+            sleep "$LOOP_INTERVAL"
         fi
     done
 else
