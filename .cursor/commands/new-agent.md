@@ -13,8 +13,11 @@ Type `/new-agent` in Cursor chat, then provide:
 1. Creates a unique timestamped workspace in `workspaces/agent_<name>_<timestamp>/`
 2. Clones the logyard2 repository to that workspace
 3. Creates a `.context.json` file with agent metadata
-4. Initializes the queue database if it doesn't exist
-5. Registers the agent in the queue system
+4. Registers the agent in the queue system
+5. Read the agent-instructions command
+6. Pull off the next piece of work and process it according to the agent-instructions
+7. Workspaces can be used by agents that own them; however, when starting a new work item, be sure to 'checkout main' and 'git pull it'
+
 
 ## Example
 
