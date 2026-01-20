@@ -9,16 +9,16 @@ LOOP_INTERVAL=15  # Default 15 seconds
 
 # Parse arguments
 ARGS=()
-i=0
-while [ $i -lt $# ]; do
-    arg="${!((i+1))}"
+i=1
+while [ $i -le $# ]; do
+    eval "arg=\${$i}"
     case "$arg" in
         --loop)
             LOOP_MODE=true
             ;;
         -n)
             i=$((i+1))
-            LOOP_INTERVAL="${!((i+1))}"
+            eval "LOOP_INTERVAL=\${$i}"
             if ! [[ "$LOOP_INTERVAL" =~ ^[0-9]+$ ]]; then
                 echo "Error: -n requires a numeric value"
                 exit 1
