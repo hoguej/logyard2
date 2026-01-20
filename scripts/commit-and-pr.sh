@@ -29,6 +29,12 @@ fi
 
 cd "$WORKSPACE_PATH"
 
+# Clean up junk files before committing
+echo "Cleaning up junk files..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$SCRIPT_DIR/cleanup-junk.sh" "$WORKSPACE_PATH" || echo "Warning: Cleanup script failed, continuing anyway..."
+echo ""
+
 # Get branch name from .context.json
 if command -v jq &> /dev/null; then
     BRANCH_NAME=$(jq -r '.branch_name' .context.json)
@@ -82,8 +88,38 @@ EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 
 if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
     echo "Pull request #${EXISTING_PR} already exists for this branch"
     echo "View it at: https://github.com/hoguej/logyard2/pull/${EXISTING_PR}"
+    PR_NUMBER="$EXISTING_PR"
 else
     PR_NUMBER=$(gh pr create --title "$PR_TITLE" --body "$PR_BODY" --head "$BRANCH_NAME" --base main --json number --jq '.number')
     echo "✓ Pull request created: #${PR_NUMBER}"
     echo "  View at: https://github.com/hoguej/logyard2/pull/${PR_NUMBER}"
 fi
+
+# Mark task as complete in queue
+echo ""
+echo "Marking task as complete in queue..."
+# Get agent name from .context.json
+if command -v jq &> /dev/null; then
+    AGENT_NAME_FROM_CONTEXT=$(jq -r '.agent_name' .context.json 2>/dev/null || echo "")
+else
+    AGENT_NAME_FROM_CONTEXT=$(python3 -c "import json; f=open('.context.json'); d=json.load(f); print(d.get('agent_name', ''))" 2>/dev/null || echo "")
+fi
+
+if [ -n "$AGENT_NAME_FROM_CONTEXT" ] && [ "$AGENT_NAME_FROM_CONTEXT" != "null" ] && [ "$AGENT_NAME_FROM_CONTEXT" != "" ]; then
+    cd "$PROJECT_ROOT"
+    bash "$SCRIPT_DIR/agent-queue.sh" complete "$AGENT_NAME_FROM_CONTEXT" "PR #${PR_NUMBER} created: ${COMMIT_MSG}"
+    echo "✓ Task marked as complete"
+    
+    # Cleanup: checkout main and pull latest
+    echo ""
+    echo "Cleaning up workspace..."
+    cd "$WORKSPACE_PATH"
+    git checkout main
+    git pull origin main
+    echo "✓ Switched to main branch and pulled latest changes"
+else
+    echo "  (No agent name found in context, skipping queue update)"
+fi
+
+echo ""
+echo "✓ All done! Ready for next task."
