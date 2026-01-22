@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>logyard2 - Queue Status</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 logyard2 - Queue Status</h1>
+        </header>
+
+        <div class="dashboard-grid">
+            <section id="queue-status">
+                <h2>QUEUE STATUS</h2>
+                <div class="queue-list" id="queues"></div>
+            </section>
+
+            <section id="root-work-items">
+                <h2>ROOT WORK ITEMS</h2>
+                <div class="work-items-list" id="work-items"></div>
+            </section>
+
+            <section id="running-agents">
+                <h2>RUNNING AGENTS</h2>
+                <div class="agents-list" id="agents"></div>
+            </section>
+
+            <section id="announcements">
+                <h2>RECENT ANNOUNCEMENTS</h2>
+                <div class="announcements-list" id="announcements"></div>
+            </section>
+        </div>
+
+        <footer>
+            <p>Updated: <span id="timestamp"></span></p>
+            <p>Auto-refresh: <span id="refresh-count">0</span>s</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
