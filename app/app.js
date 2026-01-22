@@ -829,9 +829,44 @@ fetchStatus();
 // Auto-refresh every 5 seconds
 refreshInterval = setInterval(fetchStatus, 5000);
 
+// Setup Server-Sent Events for auto-reload on file changes
+let reloadEventSource = null;
+function setupAutoReload() {
+    if (reloadEventSource) {
+        reloadEventSource.close();
+    }
+
+    reloadEventSource = new EventSource('/api/reload');
+    
+    reloadEventSource.onmessage = (event) => {
+        if (event.data === 'reload') {
+            console.log('File change detected, reloading page...');
+            window.location.reload();
+        } else if (event.data === 'connected') {
+            console.log('Auto-reload connected');
+        }
+    };
+
+    reloadEventSource.onerror = (error) => {
+        console.error('Auto-reload connection error:', error);
+        // Try to reconnect after 5 seconds
+        setTimeout(() => {
+            if (reloadEventSource.readyState === EventSource.CLOSED) {
+                setupAutoReload();
+            }
+        }, 5000);
+    };
+}
+
+// Start auto-reload listener
+setupAutoReload();
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     if (refreshInterval) {
         clearInterval(refreshInterval);
+    }
+    if (reloadEventSource) {
+        reloadEventSource.close();
     }
 });
