@@ -402,46 +402,38 @@ function renderAgentDetails(data) {
     }
 
     const agents = data.agents || [];
-    const activeTasks = data.activeTasks || [];
 
     let html = '';
 
     if (agents.length > 0) {
         html += `
             <div class="modal-section">
-                <h3>Agent Instances (${agents.length})</h3>
-                ${agents.map(agent => `
-                    <div class="modal-field">
-                        <div class="modal-field-label">Agent: ${agent.name}</div>
-                        <div class="modal-field-value">
-                            Status: ${agent.status || 'N/A'}<br>
-                            Last Heartbeat: ${formatDateTime(agent.last_heartbeat)}<br>
-                            Current Task: ${agent.current_task_id || 'None'}
+                <h3>Running Processes (${agents.length})</h3>
+                ${agents.map(agent => {
+                    const statusEmoji = agent.status === 'working' ? '🟢' : 
+                                       agent.status === 'idle' ? '🟡' : '⚫';
+                    const isRunning = agent.isRunning !== undefined ? agent.isRunning : (agent.pid != null);
+                    return `
+                        <div class="modal-field" style="margin-bottom: 16px; padding: 12px; background: #2a1f16; border-radius: 4px; border-left: 3px solid ${agent.status === 'working' ? '#4caf50' : agent.status === 'idle' ? '#ffc107' : '#666'};">
+                            <div class="modal-field-label" style="font-weight: bold; margin-bottom: 8px;">
+                                ${statusEmoji} Instance: ${agent.instance_id || 'N/A'}
+                            </div>
+                            <div class="modal-field-value" style="font-size: 11px; line-height: 1.6;">
+                                <div><strong>PID:</strong> ${agent.pid || 'N/A'} ${isRunning ? '✅ Running' : agent.pid ? '❌ Not Running' : ''}</div>
+                                <div><strong>Status:</strong> ${agent.status || 'N/A'}</div>
+                                <div><strong>Last Activity:</strong> ${agent.last_activity || 'N/A'}</div>
+                                <div><strong>Last Heartbeat:</strong> ${formatDateTime(agent.last_heartbeat) || 'N/A'}</div>
+                                ${agent.current_task_id ? `<div><strong>Current Task ID:</strong> ${agent.current_task_id}</div>` : ''}
+                                ${agent.workspace_path ? `<div><strong>Workspace:</strong> <code style="font-size: 10px;">${agent.workspace_path}</code></div>` : ''}
+                                ${agent.created_at ? `<div><strong>Started:</strong> ${formatDateTime(agent.created_at)}</div>` : ''}
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    if (activeTasks.length > 0) {
-        html += `
-            <div class="modal-section">
-                <h3>Active Tasks (${activeTasks.length})</h3>
-                <ul class="modal-list">
-                    ${activeTasks.map(task => {
-                        const emoji = statusEmojis[task.status] || '❓';
-                        return `
-                            <li class="modal-list-item clickable" data-task-id="${task.id}">
-                                ${emoji} [${task.id}] ${task.title} - ${task.status}
-                            </li>
-                        `;
-                    }).join('')}
-                </ul>
+                    `;
+                }).join('')}
             </div>
         `;
     } else {
-        html += `<div class="modal-section"><p>No active tasks</p></div>`;
+        html += `<div class="modal-section"><p>No agent processes running</p></div>`;
     }
 
     return html;
@@ -619,6 +611,30 @@ function initializeClickHandlers() {
 
     if (agentsContainer) {
         agentsContainer.addEventListener('click', async (e) => {
+            // Handle button clicks - check if click is on button or inside button
+            const btn = e.target.closest('.agent-btn');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const agentType = btn.dataset.agentType;
+                if (!agentType) {
+                    console.error('No agentType found on button:', btn);
+                    return;
+                }
+
+                if (btn.classList.contains('agent-btn-plus')) {
+                    await startAgent(agentType);
+                } else if (btn.classList.contains('agent-btn-minus')) {
+                    await stopAgent(agentType);
+                }
+                return;
+            }
+
+            // Handle agent item clicks (for modal) - but not if clicking on buttons or their containers
+            if (e.target.closest('.agent-btn') || e.target.closest('.agent-count-wrapper') || e.target.closest('.agent-right-group')) {
+                return;
+            }
+
             const item = e.target.closest('.agent-item');
             if (!item) return;
             const agentName = item.dataset.agentName;
@@ -764,15 +780,6 @@ function renderAgents(agents) {
         const idle = parseInt(agent.idle) || 0;
         const agentName = agent.script.replace('.sh', '').replace('agent-', '');
 
-        if (total === 0) {
-            return `
-                <div class="agent-item" data-agent-name="${agentName}">
-                    <span class="agent-script">${agent.script}</span>
-                    <span class="agent-count">(0)</span>
-                </div>
-            `;
-        }
-
         const parts = [];
         if (working > 0) parts.push(`<span class="working">🟢 ${working} working</span>`);
         if (idle > 0) parts.push(`<span class="idle">🟡 ${idle} idle</span>`);
@@ -780,8 +787,13 @@ function renderAgents(agents) {
         return `
             <div class="agent-item" data-agent-name="${agentName}">
                 <span class="agent-script">${agent.script}</span>
-                <span class="agent-count">
-                    (${total}) ${parts.join(', ')}
+                <span class="agent-right-group">
+                    ${parts.length > 0 ? `<span class="agent-status">${parts.join(', ')}</span>` : ''}
+                    <span class="agent-count-wrapper">
+                        <button type="button" class="agent-btn agent-btn-minus" data-agent-type="${agentName}" title="Stop agent" ${total === 0 ? 'disabled' : ''}>-</button>
+                        <span class="agent-count">(${total})</span>
+                        <button type="button" class="agent-btn agent-btn-plus" data-agent-type="${agentName}" title="Start agent">+</button>
+                    </span>
                 </span>
             </div>
         `;
@@ -815,6 +827,83 @@ function renderAnnouncements(announcements) {
         `;
     }).join('');
 
+}
+
+async function startAgent(agentType) {
+    console.log('startAgent called with:', agentType);
+    try {
+        const btn = document.querySelector(`.agent-btn-plus[data-agent-type="${agentType}"]`);
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+        }
+
+        console.log('Calling /api/agent/start with agentType:', agentType);
+        const response = await fetch('/api/agent/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentType })
+        });
+
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok || data.error) {
+            const errorMsg = data.error || `HTTP ${response.status}`;
+            console.error('Error starting agent:', errorMsg);
+            alert(`Failed to start agent: ${errorMsg}`);
+        } else {
+            console.log('Agent started successfully, refreshing status...');
+            // Refresh status immediately and again after a short delay to catch the new agent
+            fetchStatus();
+            setTimeout(fetchStatus, 2000);
+        }
+    } catch (error) {
+        console.error('Failed to start agent:', error);
+        alert(`Failed to start agent: ${error.message}`);
+    } finally {
+        const btn = document.querySelector(`.agent-btn-plus[data-agent-type="${agentType}"]`);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '+';
+        }
+    }
+}
+
+async function stopAgent(agentType) {
+    try {
+        const btn = document.querySelector(`.agent-btn-minus[data-agent-type="${agentType}"]`);
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+        }
+
+        const response = await fetch('/api/agent/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentType })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            console.error('Error stopping agent:', data.error);
+            alert(`Failed to stop agent: ${data.error}`);
+        } else {
+            // Refresh status after a short delay
+            setTimeout(fetchStatus, 1000);
+        }
+    } catch (error) {
+        console.error('Failed to stop agent:', error);
+        alert(`Failed to stop agent: ${error.message}`);
+    } finally {
+        const btn = document.querySelector(`.agent-btn-minus[data-agent-type="${agentType}"]`);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '-';
+        }
+    }
 }
 
 async function fetchStatus() {

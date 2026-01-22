@@ -110,21 +110,81 @@ UPDATE tasks SET queue_type = 'general' WHERE queue_type IS NULL;
 # DB-006: Add queue_preferences field to agents table
 sqlite3 "$DB_FILE" "
 CREATE TABLE IF NOT EXISTS agents (
-    name TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    instance_id TEXT NOT NULL,
     workspace_path TEXT,
     status TEXT DEFAULT 'idle' CHECK(status IN ('idle', 'working', 'offline')),
     current_task_id INTEGER REFERENCES tasks(id),
     last_heartbeat DATETIME,
-    last_activity TEXT
+    last_activity TEXT,
+    pid INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (name, instance_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+CREATE INDEX IF NOT EXISTS idx_agents_name_instance ON agents(name, instance_id);
 "
 
 # Add queue_preferences column if it doesn't exist
 sqlite3 "$DB_FILE" "
 ALTER TABLE agents ADD COLUMN queue_preferences TEXT;
-"
+" 2>/dev/null || true
+
+# Migration: Convert existing agents to new schema if needed
+# Check if agents table exists with old schema (name as PRIMARY KEY without instance_id)
+sqlite3 "$DB_FILE" "
+-- Check if instance_id column exists
+SELECT COUNT(*) FROM pragma_table_info('agents') WHERE name='instance_id';
+" > /tmp/check_instance_id.txt 2>/dev/null || echo "0" > /tmp/check_instance_id.txt
+
+if [ "$(cat /tmp/check_instance_id.txt)" = "0" ]; then
+    echo "Migrating agents table to multi-instance schema..."
+    
+    # Create backup table
+    sqlite3 "$DB_FILE" "
+    CREATE TABLE IF NOT EXISTS agents_backup AS SELECT * FROM agents;
+    "
+    
+    # Drop old table and recreate with new schema
+    sqlite3 "$DB_FILE" "
+    DROP TABLE IF EXISTS agents;
+    CREATE TABLE agents (
+        name TEXT NOT NULL,
+        instance_id TEXT NOT NULL,
+        workspace_path TEXT,
+        status TEXT DEFAULT 'idle' CHECK(status IN ('idle', 'working', 'offline')),
+        current_task_id INTEGER REFERENCES tasks(id),
+        last_heartbeat DATETIME,
+        last_activity TEXT,
+        pid INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (name, instance_id)
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+    CREATE INDEX IF NOT EXISTS idx_agents_name_instance ON agents(name, instance_id);
+    
+    -- Migrate existing data: assign default instance_id to existing agents
+    INSERT INTO agents (name, instance_id, workspace_path, status, current_task_id, last_heartbeat, last_activity, created_at)
+    SELECT 
+        name,
+        name || '_' || datetime('now', 'localtime') || '_legacy' as instance_id,
+        workspace_path,
+        status,
+        current_task_id,
+        last_heartbeat,
+        last_activity,
+        datetime('now', 'localtime') as created_at
+    FROM agents_backup;
+    
+    DROP TABLE IF EXISTS agents_backup;
+    "
+    
+    echo "✓ Agents table migrated to multi-instance schema"
+fi
+
+rm -f /tmp/check_instance_id.txt
 
 # DB-007: Add traceability fields to tasks table
 sqlite3 "$DB_FILE" "
