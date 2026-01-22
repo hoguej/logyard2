@@ -644,6 +644,18 @@ function initializeClickHandlers() {
                 const data = await fetchAgentDetails(agentName);
                 const content = renderAgentDetails(data);
                 navigateTo(`Agent: ${agentName}`, content);
+                return;
+            }
+
+            const mdFileItem = e.target.closest('[data-file-path]');
+            if (mdFileItem) {
+                e.stopPropagation();
+                const filePath = mdFileItem.dataset.filePath;
+                if (!filePath) return;
+                const data = await fetchMarkdownFile(filePath);
+                const content = renderMarkdownFile(data);
+                navigateTo(`File: ${filePath}`, content);
+                return;
             }
         });
     }
