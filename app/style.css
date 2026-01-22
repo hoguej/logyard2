@@ -386,14 +386,30 @@ footer {
     color: #4dd0e1;
 }
 
+.file-link,
 .md-file-link {
     color: #00bcd4;
     text-decoration: underline;
     cursor: pointer;
 }
 
+.file-link:hover,
 .md-file-link:hover {
     color: #4dd0e1;
+}
+
+.file-content {
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 3px;
+    border: 1px solid #3e3e42;
+    max-height: 500px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .markdown-content {

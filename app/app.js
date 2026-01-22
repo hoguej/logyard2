@@ -535,16 +535,25 @@ function renderMarkdownFile(data) {
         return `<div class="modal-section"><p>Error: ${data.error}</p></div>`;
     }
 
+    const displayPath = data.absolutePath || data.path;
+    const isMarkdown = data.extension === '.md' || data.extension === '.markdown';
+
     return `
         <div class="modal-section">
-            <h3>File: ${data.path}</h3>
+            <h3>File: ${displayPath}</h3>
             <div class="modal-field">
                 <div class="modal-field-label">Path</div>
-                <div class="modal-field-value">${data.path}</div>
+                <div class="modal-field-value">${displayPath}</div>
             </div>
+            ${data.extension ? `
+            <div class="modal-field">
+                <div class="modal-field-label">Type</div>
+                <div class="modal-field-value">${data.extension.substring(1).toUpperCase()} file</div>
+            </div>
+            ` : ''}
             <div class="modal-field">
                 <div class="modal-field-label">Content</div>
-                <div class="modal-field-value markdown-content">${data.html || escapeHtml(data.content)}</div>
+                <div class="modal-field-value ${isMarkdown ? 'markdown-content' : 'file-content'}">${data.html || escapeHtml(data.content)}</div>
             </div>
         </div>
     `;
@@ -647,14 +656,15 @@ function initializeClickHandlers() {
                 return;
             }
 
-            const mdFileItem = e.target.closest('[data-file-path]');
-            if (mdFileItem) {
+            const fileItem = e.target.closest('[data-file-path]');
+            if (fileItem) {
                 e.stopPropagation();
-                const filePath = mdFileItem.dataset.filePath;
+                const filePath = fileItem.dataset.filePath;
                 if (!filePath) return;
                 const data = await fetchMarkdownFile(filePath);
                 const content = renderMarkdownFile(data);
-                navigateTo(`File: ${filePath}`, content);
+                const displayPath = data.absolutePath || filePath;
+                navigateTo(`File: ${displayPath}`, content);
                 return;
             }
         });
