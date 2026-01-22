@@ -180,9 +180,30 @@ if ! command -v gh &> /dev/null; then
     log_warn "GitHub CLI (gh) not found, skipping PR creation"
     log_info "Create PR manually at: https://github.com/hoguej/logyard2/compare/$BRANCH_NAME"
 else
-    PR_NUMBER=$(gh pr create \
-        --title "$COMMIT_MSG" \
-        --body "Automated PR from ly-next workflow
+    # Check if PR already exists first
+    EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number,state --jq '.[0] | if . then "\(.number)|\(.state)" else empty end' 2>/dev/null || echo "")
+    
+    if [ -n "$EXISTING_PR" ]; then
+        PR_NUMBER=$(echo "$EXISTING_PR" | cut -d'|' -f1)
+        PR_STATE=$(echo "$EXISTING_PR" | cut -d'|' -f2)
+        log_info "PR already exists: #$PR_NUMBER (state: $PR_STATE)"
+        
+        if [ "$PR_STATE" = "OPEN" ]; then
+            # Step 8: Merge existing PR
+            log_info "Step 8: Merging existing pull request..."
+            gh pr merge "$PR_NUMBER" --merge --delete-branch || {
+                log_error "Failed to merge existing PR"
+                exit 1
+            }
+            log_success "PR merged"
+        else
+            log_warn "PR #$PR_NUMBER is in state: $PR_STATE (skipping merge)"
+        fi
+    else
+        # Create new PR
+        PR_NUMBER=$(gh pr create \
+            --title "$COMMIT_MSG" \
+            --body "Automated PR from ly-next workflow
 
 ## Changes
 $COMMIT_MSG
@@ -191,33 +212,26 @@ $COMMIT_MSG
 - Code review passed
 - Tests passed
 - Ready for merge" \
-        --head "$BRANCH_NAME" \
-        --base main \
-        --json number \
-        --jq '.number' 2>/dev/null || echo "")
+            --head "$BRANCH_NAME" \
+            --base main \
+            --json number \
+            --jq '.number' 2>/dev/null || echo "")
 
-    if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-        log_success "PR created: #$PR_NUMBER"
-        PR_URL="https://github.com/hoguej/logyard2/pull/$PR_NUMBER"
-        log_info "PR URL: $PR_URL"
+        if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            log_success "PR created: #$PR_NUMBER"
+            PR_URL="https://github.com/hoguej/logyard2/pull/$PR_NUMBER"
+            log_info "PR URL: $PR_URL"
 
-        # Step 8: Merge PR
-        log_info "Step 8: Merging pull request..."
-        gh pr merge "$PR_NUMBER" --merge --delete-branch || {
-            log_error "Failed to merge PR"
-            exit 1
-        }
-        log_success "PR merged"
-    else
-        log_warn "Could not create PR, may already exist"
-        EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
-        if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
-            log_info "Merging existing PR: #$EXISTING_PR"
-            gh pr merge "$EXISTING_PR" --merge --delete-branch || {
-                log_error "Failed to merge existing PR"
+            # Step 8: Merge PR
+            log_info "Step 8: Merging pull request..."
+            gh pr merge "$PR_NUMBER" --merge --delete-branch || {
+                log_error "Failed to merge PR"
                 exit 1
             }
             log_success "PR merged"
+        else
+            log_error "Failed to create PR"
+            exit 1
         fi
     fi
 fi
