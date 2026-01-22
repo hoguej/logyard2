@@ -122,8 +122,12 @@ $description
 Create a detailed requirements document at: requirements/researched/requirements-\${root_work_item_id}.md
 EOF
     
-    # Create instructions for Cursor agent
-    cat > "$workspace_dir/START-RESEARCH.md" <<EOF
+    # Create tmp directory for agent prompts
+    mkdir -p "$PROJECT_ROOT/tmp"
+    
+    # Create instructions for Cursor agent in tmp file
+    local prompt_file="$PROJECT_ROOT/tmp/agent-requirements-research-${task_id}.md"
+    cat > "$prompt_file" <<EOF
 # Research Task
 
 You are a requirements research agent. Your task is to research the following requirement and create a comprehensive requirements document.
@@ -162,14 +166,13 @@ When complete, the requirements document should be saved and ready for the plann
 EOF
     
     log_info "Invoking Cursor agent for research..."
+    log_info "Prompt file: $prompt_file"
     
     # Invoke Cursor agent
     # Note: This assumes Cursor CLI is available
     # In practice, this would open the workspace and file in Cursor
     if command -v cursor >/dev/null 2>&1; then
-        cd "$workspace_dir"
-        cursor "$workspace_dir/START-RESEARCH.md" 2>/dev/null || true
-        cd "$PROJECT_ROOT"
+        cursor "$workspace_dir" "$prompt_file" 2>/dev/null || true
     else
         log_warn "Cursor CLI not found, simulating research completion..."
         # For testing: create a basic requirements document

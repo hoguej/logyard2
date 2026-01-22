@@ -147,7 +147,12 @@ EOF
     fi
     
     # Create instructions for Cursor agent
-    cat > "$workspace_dir/START-PLANNING.md" <<EOF
+    # Create tmp directory for agent prompts
+    mkdir -p "$PROJECT_ROOT/tmp"
+    
+    # Create instructions for Cursor agent in tmp file
+    local prompt_file="$PROJECT_ROOT/tmp/agent-planning-${task_id}.md"
+    cat > "$prompt_file" <<EOF
 # Planning Task
 
 You are a planning agent. Your task is to break down the requirements into detailed, executable tasks.
@@ -191,12 +196,11 @@ When complete, the planning document should be saved and execution tasks should 
 EOF
     
     log_info "Invoking Cursor agent for planning..."
+    log_info "Prompt file: $prompt_file"
     
     # Invoke Cursor agent (simulated for now)
     if command -v cursor >/dev/null 2>&1; then
-        cd "$workspace_dir"
-        cursor "$workspace_dir/START-PLANNING.md" 2>/dev/null || true
-        cd "$PROJECT_ROOT"
+        cursor "$workspace_dir" "$prompt_file" 2>/dev/null || true
     else
         log_warn "Cursor CLI not found, simulating planning completion..."
         sleep 2
