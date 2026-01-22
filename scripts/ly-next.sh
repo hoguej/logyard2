@@ -35,6 +35,7 @@ log_error() {
 # Generate branch name if not provided
 BRANCH_NAME="${1:-feature/ly-next-$(date +%Y%m%d-%H%M%S)}"
 COMMIT_MSG="${2:-Update from ly-next}"
+STASHED=0
 
 log_info "Starting ly-next workflow..."
 log_info "Branch: $BRANCH_NAME"
@@ -42,6 +43,15 @@ log_info "Commit message: $COMMIT_MSG"
 
 # Step 1: Ensure we're on main and up to date
 log_info "Step 1: Ensuring main branch is up to date..."
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    log_info "Working tree has uncommitted changes, stashing..."
+    git stash push -u -m "ly-next stash" >/dev/null || {
+        log_error "Failed to stash changes"
+        exit 1
+    }
+    STASHED=1
+fi
+
 git checkout main 2>/dev/null || {
     log_error "Failed to checkout main branch"
     exit 1
@@ -64,6 +74,14 @@ else
 fi
 
 log_success "On feature branch: $BRANCH_NAME"
+
+if [ "$STASHED" -eq 1 ]; then
+    log_info "Restoring stashed changes..."
+    git stash pop >/dev/null || {
+        log_error "Failed to apply stashed changes"
+        exit 1
+    }
+fi
 
 # Step 3: Check for changes
 log_info "Step 3: Checking for changes..."
@@ -120,7 +138,8 @@ fi
 
 # Check for console.log in production code (warn only)
 log_info "  - Checking for console.log statements..."
-CONSOLE_COUNT=$(git diff main..HEAD | grep -c "console\.log" || echo "0")
+CONSOLE_COUNT=$(git diff main..HEAD | grep -c "console\.log" || true)
+CONSOLE_COUNT=${CONSOLE_COUNT:-0}
 if [ "$CONSOLE_COUNT" -gt 0 ]; then
     log_warn "    Found $CONSOLE_COUNT console.log statements (consider removing for production)"
 fi
@@ -201,7 +220,7 @@ else
         fi
     else
         # Create new PR
-        PR_NUMBER=$(gh pr create \
+        PR_CREATE_OUTPUT=$(gh pr create \
             --title "$COMMIT_MSG" \
             --body "Automated PR from ly-next workflow
 
@@ -215,7 +234,16 @@ $COMMIT_MSG
             --head "$BRANCH_NAME" \
             --base main \
             --json number \
-            --jq '.number' 2>/dev/null || echo "")
+            --jq '.number' 2>&1)
+        PR_CREATE_EXIT=$?
+
+        if [ "$PR_CREATE_EXIT" -ne 0 ]; then
+            log_error "Failed to create PR"
+            echo "$PR_CREATE_OUTPUT" | tail -10
+            exit 1
+        fi
+
+        PR_NUMBER="$PR_CREATE_OUTPUT"
 
         if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
             log_success "PR created: #$PR_NUMBER"
