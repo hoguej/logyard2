@@ -36,11 +36,15 @@ function formatTime(dateString) {
     return date.toLocaleTimeString();
 }
 
-// Format task result to detect and link PRs and markdown files
-function formatTaskResult(result) {
-    if (!result) return '';
+// Format text content to detect and link PRs, file paths, and markdown files
+// NOTE: This function only formats text for DISPLAY purposes. It does NOT modify
+// the database content. The original text in the database remains unchanged.
+// We detect patterns like "PR #123" or "/Users/.../file.md" and convert them to
+// clickable links only when rendering in the UI.
+function formatTextContent(text) {
+    if (!text) return '';
     
-    let formatted = escapeHtml(result);
+    let formatted = escapeHtml(text);
     
     // Detect PR links: "PR #123" or "PR created: https://github.com/..." or "https://github.com/.../pull/123"
     const prPatterns = [
@@ -63,15 +67,33 @@ function formatTaskResult(result) {
         });
     });
     
-    // Detect markdown file references: "requirements/00-overview.md" or "/requirements/00-overview.md"
+    // Detect absolute file paths: "/Users/.../file.md" or "/home/.../file.txt"
+    // This pattern matches paths starting with / and containing common path characters
+    const absolutePathPattern = /(\/[a-zA-Z0-9_\/\.-]+\.(md|txt|js|json|sh|py|yml|yaml|toml|csv|log|conf|config|ini|xml|html|css|ts|tsx|jsx))/g;
+    formatted = formatted.replace(absolutePathPattern, (match) => {
+        // Store the absolute path - server will handle conversion
+        return `<span class="file-link clickable" data-file-path="${match}">${match}</span>`;
+    });
+    
+    // Detect relative markdown file references: "requirements/00-overview.md" or "/requirements/00-overview.md"
+    // Skip if already matched as absolute path
     const mdPattern = /([\/]?[a-zA-Z0-9_\/-]+\.md)/g;
     formatted = formatted.replace(mdPattern, (match, filePath) => {
+        // Skip if already matched as absolute path (starts with common absolute path prefixes)
+        if (match.startsWith('/Users/') || match.startsWith('/home/') || match.startsWith('/tmp/') || match.startsWith('/var/')) {
+            return match;
+        }
         // Remove leading slash if present for consistency
         const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-        return `<span class="md-file-link clickable" data-file-path="${cleanPath}">${match}</span>`;
+        return `<span class="file-link clickable" data-file-path="${cleanPath}">${match}</span>`;
     });
     
     return formatted;
+}
+
+// Format task result (alias for backward compatibility)
+function formatTaskResult(result) {
+    return formatTextContent(result);
 }
 
 // Escape HTML to prevent XSS
@@ -207,7 +229,7 @@ function renderTaskDetails(data) {
             </div>
             <div class="modal-field">
                 <div class="modal-field-label">Description</div>
-                <div class="modal-field-value">${task.description || 'N/A'}</div>
+                <div class="modal-field-value">${formatTextContent(task.description || 'N/A')}</div>
             </div>
             <div class="modal-field">
                 <div class="modal-field-label">Status</div>
@@ -252,7 +274,7 @@ function renderTaskDetails(data) {
             ${task.error ? `
             <div class="modal-field">
                 <div class="modal-field-label">Error</div>
-                <div class="modal-field-value" style="color: #f44336;">${task.error}</div>
+                <div class="modal-field-value" style="color: #f44336;">${formatTextContent(task.error)}</div>
             </div>
             ` : ''}
         </div>
@@ -446,7 +468,7 @@ function renderAnnouncementDetails(data) {
             </div>
             <div class="modal-field">
                 <div class="modal-field-label">Message</div>
-                <div class="modal-field-value">${announcement.message || 'N/A'}</div>
+                <div class="modal-field-value">${formatTextContent(announcement.message || 'N/A')}</div>
             </div>
             <div class="modal-field">
                 <div class="modal-field-label">Created</div>
