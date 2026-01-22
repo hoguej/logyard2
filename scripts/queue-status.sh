@@ -17,37 +17,49 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 DB_FILE="$PROJECT_ROOT/.agent-queue.db"
 
-# Function to draw a progress bar
-draw_bar() {
-    local done=${1:-0}
-    local in_progress=${2:-0}
-    local total=${3:-0}
-    local width=${4:-20}
+# Function to draw a progress bar (queued vs working only)
+draw_queue_bar() {
+    local queued=${1:-0}
+    local working=${2:-0}
+    local width=${3:-25}
     
     # Ensure integers
-    done=$((done + 0))
-    in_progress=$((in_progress + 0))
-    total=$((total + 0))
+    queued=$((queued + 0))
+    working=$((working + 0))
+    local total=$((queued + working))
     
     if [ "$total" -eq 0 ]; then
         printf "${GRAY}"; for ((i=0; i<width; i++)); do printf "░"; done; printf "${RESET}"
         return
     fi
     
-    done_width=$((done * width / total))
-    progress_width=$((in_progress * width / total))
-    
-    # Ensure at least 1 char for in_progress if there are any
-    if [ "$in_progress" -gt 0 ] && [ "$progress_width" -eq 0 ]; then
-        progress_width=1
-        if [ "$done_width" -gt 0 ]; then done_width=$((done_width - 1)); fi
+    # Calculate widths more accurately
+    if [ "$total" -gt 0 ]; then
+        working_width=$((working * width / total))
+        queued_width=$((queued * width / total))
+    else
+        working_width=0
+        queued_width=0
     fi
     
-    remaining_width=$((width - done_width - progress_width))
+    # Ensure at least 1 char for working if there are any
+    if [ "$working" -gt 0 ] && [ "$working_width" -eq 0 ]; then
+        working_width=1
+        if [ "$queued_width" -gt 0 ]; then queued_width=$((queued_width - 1)); fi
+    fi
+    
+    # Ensure at least 1 char for queued if there are any
+    if [ "$queued" -gt 0 ] && [ "$queued_width" -eq 0 ]; then
+        queued_width=1
+        if [ "$working_width" -gt 0 ]; then working_width=$((working_width - 1)); fi
+    fi
+    
+    remaining_width=$((width - working_width - queued_width))
     if [ "$remaining_width" -lt 0 ]; then remaining_width=0; fi
     
-    printf "${WHITE}"; for ((i=0; i<done_width; i++)); do printf "█"; done
-    printf "${GREEN}"; for ((i=0; i<progress_width; i++)); do printf "▓"; done
+    # Draw bar using consistent block characters
+    printf "${GREEN}"; for ((i=0; i<working_width; i++)); do printf "▓"; done
+    printf "${YELLOW}"; for ((i=0; i<queued_width; i++)); do printf "█"; done
     printf "${GRAY}"; for ((i=0; i<remaining_width; i++)); do printf "░"; done
     printf "${RESET}"
 }
@@ -77,7 +89,7 @@ calc_pct() {
 # Print header
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${CYAN}║${RESET}              ${WHITE}📊 logyard2 - Queue Status${RESET}                    ${CYAN}║${RESET}"
+echo -e "${CYAN}║${RESET}              ${WHITE}📊 logyard2 - Queue Status${RESET}                      ${CYAN}║${RESET}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo ""
 
@@ -92,17 +104,16 @@ queues_exist=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM sqlite_master WHERE type
 
 if [ "$queues_exist" -gt 0 ]; then
     # Multi-queue system - show queue status
-    echo -e "${WHITE}QUEUE STATUS${RESET}"
+    echo -e "${WHITE}QUEUE STATUS  ${RESET}"
     echo -e "${GRAY}──────────────────────────────────────────────────────────────${RESET}"
     
-    # Get status for each queue
+    # Get status for each queue (queued, in_progress, and completed in last hour)
     sqlite3 "$DB_FILE" "
         SELECT 
             q.name,
             COALESCE(SUM(CASE WHEN qt.status = 'queued' THEN 1 ELSE 0 END), 0) as queued,
             COALESCE(SUM(CASE WHEN qt.status = 'in_progress' THEN 1 ELSE 0 END), 0) as in_progress,
-            COALESCE(SUM(CASE WHEN qt.status = 'completed' THEN 1 ELSE 0 END), 0) as completed,
-            COALESCE(COUNT(qt.id), 0) as total
+            COALESCE(SUM(CASE WHEN qt.status = 'completed' AND datetime(qt.updated_at) >= datetime('now', '-1 hour') THEN 1 ELSE 0 END), 0) as done_last_hour
         FROM queues q
         LEFT JOIN queue_tasks qt ON q.id = qt.queue_id
         GROUP BY q.id, q.name
@@ -118,44 +129,53 @@ if [ "$queues_exist" -gt 0 ]; then
                 WHEN 'announce' THEN 8
                 ELSE 9
             END;
-    " 2>/dev/null | while IFS='|' read -r queue_name queued in_progress completed total; do
+    " 2>/dev/null | while IFS='|' read -r queue_name queued in_progress done_last_hour; do
         queued=${queued:-0}
         in_progress=${in_progress:-0}
-        completed=${completed:-0}
-        total=${total:-0}
+        done_last_hour=${done_last_hour:-0}
         
-        # Format queue name
-        local display_name
+        # Format queue name with specific spacing
+        # Note: Emojis take 2 terminal columns, so we manually pad to match terminal width
+        # Target terminal width: 21 columns (matching Pre-Commit which is correct)
+        display_name=""
         case "$queue_name" in
-            requirements-research) display_name="📋 Research" ;;
-            planning) display_name="📝 Planning" ;;
-            execution) display_name="⚙️  Execution" ;;
-            pre-commit-check) display_name="✅ Pre-Commit" ;;
-            commit-build) display_name="🔨 Commit/Build" ;;
-            deploy) display_name="🚀 Deploy" ;;
-            e2e-test) display_name="🧪 E2E Test" ;;
-            announce) display_name="📢 Announce" ;;
+            requirements-research) display_name="📋 Research         " ;;  # 12 -> 21 (9 spaces)
+            planning) display_name="📝 Planning         " ;;  # 12 -> 21 (9 spaces)
+            execution) display_name="⚙️  Execution        " ;;  # 21 -> 23 (8 spaces, 2 more than original 6)
+            pre-commit-check) display_name="✅ Pre-Commit       " ;;  # 14 -> 21 (7 spaces) - CORRECT
+            commit-build) display_name="🔨 Commit/Build     " ;;  # 15 -> 21 (6 spaces) - reduced padding
+            deploy) display_name="🚀 Deploy           " ;;  # 10 -> 21 (11 spaces)
+            e2e-test) display_name="🧪 E2E Test         " ;;  # 12 -> 21 (9 spaces)
+            announce) display_name="📢 Announce         " ;;  # 12 -> 21 (9 spaces)
             *) display_name="$queue_name" ;;
         esac
         
-        printf "%-20s " "$display_name"
-        draw_bar "$completed" "$in_progress" "$total" 25
-        printf " Q:%d W:%d ✓:%d\n" "$queued" "$in_progress" "$completed"
+        # Print without additional padding since we manually padded above
+        printf "%s" "$display_name"
+        draw_queue_bar "$queued" "$in_progress" 22
+        printf " Q:%d W:%d" "$queued" "$in_progress"
+        if [ "$done_last_hour" -gt 0 ]; then
+            printf " ${GRAY}✓:%d${RESET}" "$done_last_hour"
+        fi
+        printf "\n"
     done
     
     echo ""
     
-    # Show root work items being worked on
+    # Show root work items (in progress or recently finished)
     root_work_items_exist=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='root_work_items';" 2>/dev/null) || root_work_items_exist=0
     
     if [ "$root_work_items_exist" -gt 0 ]; then
-        active_work=$(sqlite3 "$DB_FILE" "
+        # Count items in progress or completed in last hour
+        relevant_work=$(sqlite3 "$DB_FILE" "
             SELECT COUNT(*) FROM root_work_items 
-            WHERE status NOT IN ('completed', 'failed', 'cancelled');
-        " 2>/dev/null) || active_work=0
+            WHERE status NOT IN ('completed', 'failed', 'cancelled')
+            OR (status = 'completed' AND completed_at >= datetime('now', '-1 hour'))
+            OR (status = 'failed' AND failed_at >= datetime('now', '-1 hour'));
+        " 2>/dev/null) || relevant_work=0
         
-        if [ "$active_work" -gt 0 ]; then
-            echo -e "${WHITE}ACTIVE ROOT WORK ITEMS${RESET}"
+        if [ "$relevant_work" -gt 0 ]; then
+            echo -e "${WHITE}ROOT WORK ITEMS${RESET}"
             echo -e "${GRAY}──────────────────────────────────────────────────────────────${RESET}"
             
             sqlite3 "$DB_FILE" "
@@ -169,12 +189,24 @@ if [ "$queues_exist" -gt 0 ]; then
                         WHEN 'building' THEN '🔨'
                         WHEN 'deploying' THEN '🚀'
                         WHEN 'testing' THEN '🧪'
+                        WHEN 'completed' THEN '✅'
+                        WHEN 'failed' THEN '❌'
                         ELSE '❓'
                     END || ' ' ||
-                    printf('%-50s', substr(title, 1, 50)) ||
-                    ' [' || status || ']'
+                    '[' || id || '] ' ||
+                    printf('%-40s', substr(title, 1, 40)) ||
+                    ' [' || status || ']' ||
+                    CASE 
+                        WHEN status = 'completed' AND completed_at IS NOT NULL AND datetime(completed_at) >= datetime('now', '-1 hour') THEN 
+                            ' (' || strftime('%H:%M', completed_at) || ')'
+                        WHEN status = 'failed' AND failed_at IS NOT NULL AND datetime(failed_at) >= datetime('now', '-1 hour') THEN 
+                            ' (' || strftime('%H:%M', failed_at) || ')'
+                        ELSE ''
+                    END
                 FROM root_work_items
                 WHERE status NOT IN ('completed', 'failed', 'cancelled')
+                OR (status = 'completed' AND datetime(completed_at) >= datetime('now', '-1 hour'))
+                OR (status = 'failed' AND datetime(failed_at) >= datetime('now', '-1 hour'))
                 ORDER BY 
                     CASE status
                         WHEN 'executing' THEN 1
@@ -185,10 +217,11 @@ if [ "$queues_exist" -gt 0 ]; then
                         WHEN 'planning' THEN 6
                         WHEN 'researching' THEN 7
                         WHEN 'pending' THEN 8
-                        ELSE 9
+                        WHEN 'completed' THEN 9
+                        WHEN 'failed' THEN 10
+                        ELSE 11
                     END,
-                    created_at DESC
-                LIMIT 10;
+                    created_at DESC;
             " 2>/dev/null | while read -r line; do
                 echo "  $line"
             done
@@ -273,73 +306,61 @@ if [ "$queues_exist" -eq 0 ]; then
     echo ""
 fi
 
-# Agent Status
+# Agent Status by Script Type
 agents_exist=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='agents';" 2>/dev/null) || agents_exist=0
 
-if [ "$agents_exist" -gt 0 ]; then
-    # Count active agents
-    working_count=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM agents WHERE status = 'working';" 2>/dev/null) || working_count=0
-    alive_count=$(sqlite3 "$DB_FILE" "
-        SELECT COUNT(*) FROM agents 
-        WHERE status = 'working' 
-        OR (status = 'idle' AND last_heartbeat >= datetime('now', '-30 minutes'));
-    " 2>/dev/null) || alive_count=0
-    dead_count=$(sqlite3 "$DB_FILE" "
-        SELECT COUNT(*) FROM agents 
-        WHERE status != 'working' 
-        AND (last_heartbeat IS NULL OR last_heartbeat < datetime('now', '-30 minutes'));
-    " 2>/dev/null) || dead_count=0
+if [ "$agents_exist" -gt 0 ] && [ "$queues_exist" -gt 0 ]; then
+    echo -e "${WHITE}RUNNING AGENTS${RESET}"
+    echo -e "${GRAY}──────────────────────────────────────────────────────────────${RESET}"
     
-    if [ "$alive_count" -gt 0 ]; then
-        echo -e "${WHITE}ACTIVE AGENTS${RESET} (${working_count} working, ${alive_count} alive)"
-        echo -e "${GRAY}──────────────────────────────────────────────────────────────${RESET}"
+    # List all agents in workflow order, showing count for each
+    declare -a agent_scripts=(
+        "requirements-research:agent-requirements-research.sh"
+        "planning:agent-planning.sh"
+        "execution:agent-execution.sh"
+        "pre-commit-check:agent-pre-commit-check.sh"
+        "commit-build:agent-commit-build.sh"
+        "deploy:agent-deploy.sh"
+        "e2e-test:agent-e2e-test.sh"
+    )
+    
+    for agent_info in "${agent_scripts[@]}"; do
+        queue_name="${agent_info%%:*}"
+        script_name="${agent_info##*:}"
         
-        # Show only alive agents
-        sqlite3 "$DB_FILE" "
-            SELECT 
-                CASE a.status 
-                    WHEN 'working' THEN '🟢'
-                    WHEN 'idle' THEN '🟡'
-                    ELSE '⚫'
-                END || ' ' || 
-                printf('%-14s', a.name) ||
-                CASE 
-                    WHEN a.current_task_id IS NOT NULL THEN '│ ' || t.title
-                    ELSE '│ (idle - ready for work)'
-                END
-            FROM agents a
-            LEFT JOIN tasks t ON a.current_task_id = t.id
-            WHERE a.status = 'working' 
-            OR (a.status = 'idle' AND a.last_heartbeat >= datetime('now', '-30 minutes'))
-            ORDER BY a.status DESC, a.last_heartbeat DESC;
-        " 2>/dev/null || echo "  (no active agents)"
-        echo ""
-    fi
-    
-    if [ "$dead_count" -gt 0 ]; then
-        echo -e "${GRAY}💀 $dead_count dead agent(s) hidden (no activity in 30+ min)${RESET}"
-        echo ""
-    fi
-    
-    # Show stuck agents
-    stuck_agents=$(sqlite3 "$DB_FILE" "
-        SELECT COUNT(*) FROM agents 
-        WHERE status = 'working' 
-        AND last_heartbeat < datetime('now', '-10 minutes');
-    " 2>/dev/null) || stuck_agents=0
-    
-    if [ "$stuck_agents" -gt 0 ]; then
-        echo -e "${YELLOW}⚠️  Stuck agents (working but no heartbeat in 10+ min):${RESET}"
-        sqlite3 "$DB_FILE" "
-            SELECT '     ' || name || ' on: ' || 
-                (SELECT title FROM tasks WHERE id = current_task_id) ||
-                ' (last seen: ' || strftime('%H:%M', last_heartbeat) || ')'
-            FROM agents 
-            WHERE status = 'working' 
-            AND last_heartbeat < datetime('now', '-10 minutes');
-        " 2>/dev/null
-        echo ""
-    fi
+        # Count agents for this queue type
+        working=$(sqlite3 "$DB_FILE" "
+            SELECT COUNT(*) FROM agents 
+            WHERE name = '$queue_name' 
+            AND status = 'working' 
+            AND last_heartbeat >= datetime('now', '-30 minutes');
+        " 2>/dev/null || echo "0")
+        
+        idle=$(sqlite3 "$DB_FILE" "
+            SELECT COUNT(*) FROM agents 
+            WHERE name = '$queue_name' 
+            AND status = 'idle' 
+            AND last_heartbeat >= datetime('now', '-30 minutes');
+        " 2>/dev/null || echo "0")
+        
+        working=${working:-0}
+        idle=${idle:-0}
+        total=$((working + idle))
+        
+        printf "  %-35s " "$script_name"
+        printf "($total)"
+        if [ "$working" -gt 0 ]; then
+            printf " ${GREEN}🟢 %d working${RESET}" "$working"
+        fi
+        if [ "$idle" -gt 0 ]; then
+            if [ "$working" -gt 0 ]; then
+                printf ", "
+            fi
+            printf "${YELLOW}🟡 %d idle${RESET}" "$idle"
+        fi
+        printf "\n"
+    done
+    echo ""
 fi
 
 # Show task details (works for both old and new systems)
@@ -392,8 +413,42 @@ if [ "$queues_exist" -eq 0 ]; then
     fi
 fi
 
+# Show last 5 announcements
+announcements_exist=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='announcements';" 2>/dev/null) || announcements_exist=0
+
+if [ "$announcements_exist" -gt 0 ]; then
+    announcement_count=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM announcements;" 2>/dev/null) || announcement_count=0
+    
+    if [ "$announcement_count" -gt 0 ]; then
+        echo -e "${WHITE}RECENT ANNOUNCEMENTS${RESET}"
+        echo -e "${GRAY}──────────────────────────────────────────────────────────────${RESET}"
+        
+        sqlite3 "$DB_FILE" "
+            SELECT 
+                CASE type
+                    WHEN 'error' THEN '🔴'
+                    WHEN 'work-completed' THEN '✅'
+                    WHEN 'work-taken' THEN '🟢'
+                    WHEN 'question' THEN '❓'
+                    WHEN 'status' THEN 'ℹ️ '
+                    ELSE '📢'
+                END || ' ' ||
+                COALESCE(agent_name, 'system') || ': ' ||
+                substr(message, 1, 60) ||
+                CASE WHEN length(message) > 60 THEN '...' ELSE '' END ||
+                ' (' || strftime('%H:%M', created_at) || ')'
+            FROM announcements
+            ORDER BY created_at DESC
+            LIMIT 5;
+        " 2>/dev/null | while read -r line; do
+            echo "  $line"
+        done
+        echo ""
+    fi
+fi
+
 # Legend
 echo -e "${GRAY}──────────────────────────────────────────────────────────────${RESET}"
-echo -e "Legend: ${WHITE}█${RESET} Done  ${GREEN}▓${RESET} In Progress  ${GRAY}░${RESET} Not Started"
+echo -e "Legend: ${GREEN}▓${RESET} Working  ${YELLOW}█${RESET} Queued  ${GRAY}░${RESET} Empty"
 echo -e "${GRAY}Updated: $(date '+%Y-%m-%d %H:%M:%S')${RESET}"
 echo ""

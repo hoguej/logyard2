@@ -167,8 +167,12 @@ EOF
     local new_context="{\"workspace_path\": \"$workspace_path\", \"branch_name\": \"$branch_name\", \"root_work_item_id\": $root_work_item_id}"
     sqlite3 "$DB_FILE" "UPDATE tasks SET context = '$new_context' WHERE id = $task_id;"
     
-    # Create execution instructions
-    cat > "$workspace_path/START-EXECUTION.md" <<EOF
+    # Create tmp directory for agent prompts
+    mkdir -p "$PROJECT_ROOT/tmp"
+    
+    # Create execution instructions in tmp file
+    local prompt_file="$PROJECT_ROOT/tmp/agent-execution-${task_id}.md"
+    cat > "$prompt_file" <<EOF
 # Execution Task
 
 You are an execution agent. Your task is to implement the code changes.
@@ -211,10 +215,11 @@ When complete, the code should be ready for pre-commit checks.
 EOF
     
     log_info "Invoking Cursor agent for execution..."
+    log_info "Prompt file: $prompt_file"
     
     # Invoke Cursor agent (simulated)
     if command -v cursor >/dev/null 2>&1; then
-        cursor "$workspace_path/START-EXECUTION.md" 2>/dev/null || true
+        cursor "$workspace_path" "$prompt_file" 2>/dev/null || true
     else
         log_warn "Cursor CLI not found, simulating execution completion..."
         # Create a placeholder file to show work was done

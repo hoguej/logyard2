@@ -250,11 +250,22 @@ EOF
     echo ""
     echo "Invoking Cursor agent to work on task..."
     
-    # Open workspace in Cursor - agent will see START-WORK.md and begin
+    # Create tmp directory for agent prompts
+    mkdir -p "$PROJECT_ROOT/tmp"
+    
+    # Create prompt file in tmp directory
+    local prompt_file="$PROJECT_ROOT/tmp/new-agent-${TASK_ID}.md"
+    cat > "$prompt_file" <<EOF
+$(cat "$AGENT_START_FILE")
+EOF
+    
+    echo "Prompt file: $prompt_file"
+    
+    # Open workspace in Cursor - agent will reference the prompt file
     ABS_WORKSPACE_PATH="$(pwd)"
     if command -v cursor &> /dev/null; then
         echo "Opening workspace in Cursor and starting agent..."
-        cursor "$ABS_WORKSPACE_PATH" "$AGENT_START_FILE" 2>/dev/null || true
+        cursor "$ABS_WORKSPACE_PATH" "$prompt_file" 2>/dev/null || true
         echo "✓ Workspace opened - Agent should now be working"
     else
         echo "Error: Cursor CLI not found. Cannot invoke agent."
