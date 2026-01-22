@@ -9,6 +9,16 @@ const PORT = process.env.PORT || 3000;
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DB_FILE = path.join(PROJECT_ROOT, '.agent-queue.db');
 
+// Escape HTML
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Simple markdown to HTML converter
 function markdownToHtml(markdown) {
   let html = markdown;
@@ -298,42 +308,76 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API endpoint for markdown files
+  // API endpoint for files (markdown and other text files)
   const fileMatch = req.url.match(/^\/api\/file\?path=(.+)$/);
   if (fileMatch) {
     try {
-      const filePath = decodeURIComponent(fileMatch[1]);
-      const fullPath = path.join(PROJECT_ROOT, filePath);
+      let filePath = decodeURIComponent(fileMatch[1]);
+      let fullPath;
       
-      // Security: ensure path is within project root
-      if (!fullPath.startsWith(PROJECT_ROOT)) {
+      // Handle absolute paths - convert to relative if within project root
+      if (path.isAbsolute(filePath)) {
+        // Check if the absolute path is within the project root
+        const normalizedPath = path.normalize(filePath);
+        const normalizedRoot = path.normalize(PROJECT_ROOT);
+        
+        if (!normalizedPath.startsWith(normalizedRoot)) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'File is outside project root' }));
+          return;
+        }
+        
+        fullPath = normalizedPath;
+        // Convert to relative path for display
+        filePath = path.relative(PROJECT_ROOT, normalizedPath);
+      } else {
+        // Relative path
+        fullPath = path.join(PROJECT_ROOT, filePath);
+      }
+      
+      // Security: ensure path is within project root (double check)
+      const normalizedFullPath = path.normalize(fullPath);
+      const normalizedRoot = path.normalize(PROJECT_ROOT);
+      if (!normalizedFullPath.startsWith(normalizedRoot)) {
         res.writeHead(403, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Access denied' }));
         return;
       }
       
-      // Check if file exists and is markdown
-      if (!fs.existsSync(fullPath)) {
+      // Check if file exists
+      if (!fs.existsSync(normalizedFullPath)) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'File not found' }));
         return;
       }
       
-      const ext = path.extname(fullPath).toLowerCase();
-      if (ext !== '.md' && ext !== '.markdown') {
+      // Check if it's a file (not a directory)
+      const stats = fs.statSync(normalizedFullPath);
+      if (!stats.isFile()) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'File is not markdown' }));
+        res.end(JSON.stringify({ error: 'Path is not a file' }));
         return;
       }
       
-      const content = fs.readFileSync(fullPath, 'utf8');
-      const html = markdownToHtml(content);
+      const content = fs.readFileSync(normalizedFullPath, 'utf8');
+      const ext = path.extname(normalizedFullPath).toLowerCase();
+      
+      // Convert to HTML if it's markdown
+      let html = null;
+      if (ext === '.md' || ext === '.markdown') {
+        html = markdownToHtml(content);
+      } else {
+        // For other text files, escape and preserve formatting
+        html = '<pre>' + escapeHtml(content) + '</pre>';
+      }
       
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ 
         path: filePath,
+        absolutePath: normalizedFullPath,
         content: content,
-        html: html
+        html: html,
+        extension: ext
       }));
     } catch (error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
