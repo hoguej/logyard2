@@ -521,6 +521,35 @@ async function fetchAnnouncementDetails(announcementId) {
     }
 }
 
+async function fetchMarkdownFile(filePath) {
+    try {
+        const response = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
+        return await response.json();
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+function renderMarkdownFile(data) {
+    if (data.error) {
+        return `<div class="modal-section"><p>Error: ${data.error}</p></div>`;
+    }
+
+    return `
+        <div class="modal-section">
+            <h3>File: ${data.path}</h3>
+            <div class="modal-field">
+                <div class="modal-field-label">Path</div>
+                <div class="modal-field-value">${data.path}</div>
+            </div>
+            <div class="modal-field">
+                <div class="modal-field-label">Content</div>
+                <div class="modal-field-value markdown-content">${data.html || escapeHtml(data.content)}</div>
+            </div>
+        </div>
+    `;
+}
+
 function initializeClickHandlers() {
     if (handlersInitialized) return;
     handlersInitialized = true;
@@ -615,6 +644,18 @@ function initializeClickHandlers() {
                 const data = await fetchAgentDetails(agentName);
                 const content = renderAgentDetails(data);
                 navigateTo(`Agent: ${agentName}`, content);
+                return;
+            }
+
+            const mdFileItem = e.target.closest('[data-file-path]');
+            if (mdFileItem) {
+                e.stopPropagation();
+                const filePath = mdFileItem.dataset.filePath;
+                if (!filePath) return;
+                const data = await fetchMarkdownFile(filePath);
+                const content = renderMarkdownFile(data);
+                navigateTo(`File: ${filePath}`, content);
+                return;
             }
         });
     }
