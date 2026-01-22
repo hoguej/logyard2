@@ -144,6 +144,24 @@ h2 {
     position: relative;
 }
 
+.section-subtitle {
+    color: #cdb79a;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+}
+
+.lumber-stack h2 {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #8a6b4f 0%, #a37b55 50%, #8a6b4f 100%);
+    color: #2f2014;
+    border: 1px solid #6b4b2f;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
 h2::after {
     content: '';
     position: absolute;
@@ -343,27 +361,12 @@ h2::after {
     position: relative;
     padding: 6px 8px;
     margin-bottom: 6px;
-    background:
-        repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0px, rgba(0, 0, 0, 0.08) 2px, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0) 9px),
-        linear-gradient(90deg, #d1a26a 0%, #e3c28a 50%, #d1a26a 100%);
+    background: linear-gradient(90deg, #d1a26a 0%, #e3c28a 50%, #d1a26a 100%);
     border-radius: 2px;
     border: 1px solid #9c6b3f;
     box-shadow:
         0 1px 0 rgba(0, 0, 0, 0.45),
         0 2px 0 rgba(0, 0, 0, 0.25);
-}
-
-.announcement::before {
-    content: '';
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    top: 50%;
-    height: 4px;
-    transform: translateY(-50%);
-    background: repeating-linear-gradient(90deg, rgba(120, 102, 84, 0.6) 0px, rgba(120, 102, 84, 0.6) 8px, rgba(0, 0, 0, 0) 8px, rgba(0, 0, 0, 0) 20px);
-    opacity: 0.35;
-    z-index: 0;
 }
 
 .announcements-list {
