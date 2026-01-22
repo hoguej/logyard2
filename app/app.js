@@ -68,7 +68,7 @@ function formatTaskResult(result) {
     formatted = formatted.replace(mdPattern, (match, filePath) => {
         // Remove leading slash if present for consistency
         const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-        return `<span class="md-file-link clickable" data-file-path="${cleanPath}">${match}</span>`;
+        return `<span class="file-link clickable" data-file-path="${cleanPath}">${match}</span>`;
     });
     
     return formatted;
