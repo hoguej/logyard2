@@ -220,6 +220,7 @@ else
         fi
     else
         # Create new PR
+        set +e
         PR_CREATE_OUTPUT=$(gh pr create \
             --title "$COMMIT_MSG" \
             --body "Automated PR from ly-next workflow
@@ -236,6 +237,7 @@ $COMMIT_MSG
             --json number \
             --jq '.number' 2>&1)
         PR_CREATE_EXIT=$?
+        set -e
 
         if [ "$PR_CREATE_EXIT" -ne 0 ]; then
             log_error "Failed to create PR"
