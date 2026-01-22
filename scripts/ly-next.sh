@@ -35,6 +35,7 @@ log_error() {
 # Generate branch name if not provided
 BRANCH_NAME="${1:-feature/ly-next-$(date +%Y%m%d-%H%M%S)}"
 COMMIT_MSG="${2:-Update from ly-next}"
+STASHED=0
 
 log_info "Starting ly-next workflow..."
 log_info "Branch: $BRANCH_NAME"
@@ -42,6 +43,15 @@ log_info "Commit message: $COMMIT_MSG"
 
 # Step 1: Ensure we're on main and up to date
 log_info "Step 1: Ensuring main branch is up to date..."
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    log_info "Working tree has uncommitted changes, stashing..."
+    git stash push -u -m "ly-next stash" >/dev/null || {
+        log_error "Failed to stash changes"
+        exit 1
+    }
+    STASHED=1
+fi
+
 git checkout main 2>/dev/null || {
     log_error "Failed to checkout main branch"
     exit 1
@@ -64,6 +74,14 @@ else
 fi
 
 log_success "On feature branch: $BRANCH_NAME"
+
+if [ "$STASHED" -eq 1 ]; then
+    log_info "Restoring stashed changes..."
+    git stash pop >/dev/null || {
+        log_error "Failed to apply stashed changes"
+        exit 1
+    }
+fi
 
 # Step 3: Check for changes
 log_info "Step 3: Checking for changes..."
@@ -120,7 +138,8 @@ fi
 
 # Check for console.log in production code (warn only)
 log_info "  - Checking for console.log statements..."
-CONSOLE_COUNT=$(git diff main..HEAD | grep -c "console\.log" || echo "0")
+CONSOLE_COUNT=$(git diff main..HEAD | grep -c "console\.log" || true)
+CONSOLE_COUNT=${CONSOLE_COUNT:-0}
 if [ "$CONSOLE_COUNT" -gt 0 ]; then
     log_warn "    Found $CONSOLE_COUNT console.log statements (consider removing for production)"
 fi
@@ -180,9 +199,19 @@ if ! command -v gh &> /dev/null; then
     log_warn "GitHub CLI (gh) not found, skipping PR creation"
     log_info "Create PR manually at: https://github.com/hoguej/logyard2/compare/$BRANCH_NAME"
 else
-    PR_NUMBER=$(gh pr create \
-        --title "$COMMIT_MSG" \
-        --body "Automated PR from ly-next workflow
+    PR_NUMBER=""
+
+    # Check if PR already exists first (compatible with older gh versions)
+    EXISTING_PR_LINE=$(gh pr list --head "$BRANCH_NAME" --limit 1 --state all 2>/dev/null | head -1 || true)
+    if [ -n "$EXISTING_PR_LINE" ]; then
+        PR_NUMBER=$(echo "$EXISTING_PR_LINE" | awk '{print $1}' | tr -d '#')
+        log_info "PR already exists: #$PR_NUMBER"
+    else
+        # Create new PR (avoid --json for older gh versions)
+        set +e
+        PR_CREATE_OUTPUT=$(gh pr create \
+            --title "$COMMIT_MSG" \
+            --body "Automated PR from ly-next workflow
 
 ## Changes
 $COMMIT_MSG
@@ -191,16 +220,30 @@ $COMMIT_MSG
 - Code review passed
 - Tests passed
 - Ready for merge" \
-        --head "$BRANCH_NAME" \
-        --base main \
-        --json number \
-        --jq '.number' 2>/dev/null || echo "")
+            --head "$BRANCH_NAME" \
+            --base main 2>&1)
+        PR_CREATE_EXIT=$?
+        set -e
 
-    if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-        log_success "PR created: #$PR_NUMBER"
-        PR_URL="https://github.com/hoguej/logyard2/pull/$PR_NUMBER"
-        log_info "PR URL: $PR_URL"
+        if [ "$PR_CREATE_EXIT" -ne 0 ]; then
+            log_error "Failed to create PR"
+            echo "$PR_CREATE_OUTPUT" | tail -10
+            exit 1
+        fi
 
+        PR_URL=$(echo "$PR_CREATE_OUTPUT" | grep -Eo 'https://github.com/[^ ]+/pull/[0-9]+' | head -1)
+        if [ -n "$PR_URL" ]; then
+            PR_NUMBER=$(basename "$PR_URL")
+            log_success "PR created: #$PR_NUMBER"
+            log_info "PR URL: $PR_URL"
+        else
+            log_error "Failed to determine PR URL from gh output"
+            echo "$PR_CREATE_OUTPUT" | tail -10
+            exit 1
+        fi
+    fi
+
+    if [ -n "$PR_NUMBER" ]; then
         # Step 8: Merge PR
         log_info "Step 8: Merging pull request..."
         gh pr merge "$PR_NUMBER" --merge --delete-branch || {
@@ -209,16 +252,8 @@ $COMMIT_MSG
         }
         log_success "PR merged"
     else
-        log_warn "Could not create PR, may already exist"
-        EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
-        if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
-            log_info "Merging existing PR: #$EXISTING_PR"
-            gh pr merge "$EXISTING_PR" --merge --delete-branch || {
-                log_error "Failed to merge existing PR"
-                exit 1
-            }
-            log_success "PR merged"
-        fi
+        log_error "Failed to determine PR number"
+        exit 1
     fi
 fi
 
