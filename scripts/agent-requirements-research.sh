@@ -17,8 +17,10 @@ source "$PROJECT_ROOT/lib/workflow-functions.sh"
 # Parse arguments
 LOOP_MODE=false
 LOOP_INTERVAL=15
+INSTANCE_ID=""
 SCRIPT_PATH="$0"
 LAST_MODIFIED_FILE="/tmp/agent-requirements-research-last-modified"
+PID_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -30,6 +32,10 @@ while [[ $# -gt 0 ]]; do
             LOOP_INTERVAL="$2"
             shift 2
             ;;
+        --instance-id)
+            INSTANCE_ID="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -37,10 +43,32 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Generate instance ID if not provided
+if [ -z "$INSTANCE_ID" ]; then
+    INSTANCE_ID=$(date +%Y%m%d_%H%M%S_%N | cut -c1-23)
+fi
+
+# Set PID file
+PID_FILE="/tmp/agent-${AGENT_NAME}-${INSTANCE_ID}.pid"
+
+# Write PID to file
+echo $$ > "$PID_FILE"
+
+# Register in database with PID
+sqlite3 "$DB_FILE" "
+    INSERT OR REPLACE INTO agents (name, instance_id, pid, status, last_heartbeat, last_activity)
+    VALUES ('$AGENT_NAME', '$INSTANCE_ID', $$, 'idle', datetime('now'), 'Starting up');
+" 2>/dev/null || log_warn "Could not register in database"
+
+# Log startup message
+log_info "Agent instance $INSTANCE_ID started (PID: $$)"
+
 # Setup graceful shutdown
 cleanup() {
-    log_info "Shutting down requirements-research agent..."
-    update_heartbeat "$AGENT_NAME" "Shutting down"
+    log_info "Shutting down requirements-research agent (instance: $INSTANCE_ID)..."
+    update_heartbeat "$AGENT_NAME" "Shutting down" "$INSTANCE_ID" "offline"
+    # Clean up PID file
+    rm -f "$PID_FILE"
     exit 0
 }
 setup_graceful_shutdown cleanup
@@ -273,6 +301,9 @@ if [ "$LOOP_MODE" = true ]; then
     log_info "Press Ctrl+C to stop"
     echo ""
     
+    # Track startup time to preserve "Starting up" message for a few seconds
+    STARTUP_TIME=$(date +%s)
+    
     while true; do
         # Check if script was modified
         if check_script_modified "$SCRIPT_PATH" "$LAST_MODIFIED_FILE"; then
@@ -281,13 +312,20 @@ if [ "$LOOP_MODE" = true ]; then
         fi
         
         # Update heartbeat
-        update_heartbeat "$AGENT_NAME" "Monitoring queue"
+        # Preserve "Starting up" message for first 10 seconds
+        current_time=$(date +%s)
+        elapsed=$((current_time - STARTUP_TIME))
+        if [ $elapsed -lt 10 ]; then
+            update_heartbeat "$AGENT_NAME" "Starting up" "$INSTANCE_ID" "idle"
+        else
+            update_heartbeat "$AGENT_NAME" "Monitoring queue" "$INSTANCE_ID" "idle"
+        fi
         
         # Check for stale agents
         check_stale_agents "$LOOP_INTERVAL"
         
-        # Try to claim a task
-        task_id=$(claim_task "requirements-research" "$AGENT_NAME")
+        # Try to claim a task (don't fail if no tasks available)
+        task_id=$(claim_task "requirements-research" "$AGENT_NAME" || true)
         
         if [ -n "$task_id" ] && [ "$task_id" != "" ]; then
             log_info "Claimed task: $task_id"
@@ -308,7 +346,7 @@ else
     # Single run mode
     log_info "Running requirements-research agent (single task mode)"
     
-    task_id=$(claim_task "requirements-research" "$AGENT_NAME")
+    task_id=$(claim_task "requirements-research" "$AGENT_NAME" || true)
     
     if [ -n "$task_id" ] && [ "$task_id" != "" ]; then
         log_info "Claimed task: $task_id"

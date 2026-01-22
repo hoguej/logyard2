@@ -212,20 +212,37 @@ EOF
 
 # LIB-004: Heartbeat management
 # Update agent heartbeat
-# Usage: update_heartbeat AGENT_NAME [ACTIVITY_MESSAGE]
+# Usage: update_heartbeat AGENT_NAME [ACTIVITY_MESSAGE] [INSTANCE_ID] [STATUS]
 update_heartbeat() {
     local agent_name="$1"
     local activity="${2:-Working}"
+    local instance_id="${3:-}"
+    local status="${4:-working}"
     
     if [ -z "$agent_name" ]; then
         log_error "update_heartbeat: agent_name required"
         return 1
     fi
     
-    sqlite3 "$DB_FILE" <<EOF
-INSERT OR REPLACE INTO agents (name, status, last_heartbeat, last_activity)
-VALUES ('$agent_name', 'working', CURRENT_TIMESTAMP, '$activity');
+    # If instance_id provided, update specific instance
+    if [ -n "$instance_id" ]; then
+        sqlite3 "$DB_FILE" <<EOF
+UPDATE agents 
+SET status = '$status',
+    last_heartbeat = CURRENT_TIMESTAMP,
+    last_activity = '$activity'
+WHERE name = '$agent_name' AND instance_id = '$instance_id';
 EOF
+    else
+        # Legacy: update all instances with this name (for backward compatibility)
+        sqlite3 "$DB_FILE" <<EOF
+UPDATE agents 
+SET status = '$status',
+    last_heartbeat = CURRENT_TIMESTAMP,
+    last_activity = '$activity'
+WHERE name = '$agent_name';
+EOF
+    fi
 }
 
 # Check for stale agents and return their tasks to queue

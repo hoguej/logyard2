@@ -68,6 +68,7 @@ function markdownToHtml(markdown) {
 // MIME types
 const mimeTypes = {
   '.html': 'text/html',
+  '.ico': 'image/x-icon',
   '.js': 'text/javascript',
   '.css': 'text/css',
   '.json': 'application/json',
@@ -178,29 +179,123 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API endpoint for agent details
-  const agentMatch = req.url.match(/^\/api\/agent\/([^\/]+)$/);
-  if (agentMatch) {
-    try {
-      const agentName = decodeURIComponent(agentMatch[1]);
-      const agent = getAgentDetails(agentName);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(agent, null, 2));
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: error.message }));
-    }
+  // API endpoint to start agent daemon (must come before /api/agent/:name route)
+  if (req.url === '/api/agent/start' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const agentType = data.agentType;
+        
+        if (!agentType) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'agentType required' }));
+          return;
+        }
+
+        // Call daemon manager to start agent
+        const daemonScript = path.join(PROJECT_ROOT, 'scripts', 'agent-daemon.sh');
+        try {
+          const result = execSync(
+            `bash "${daemonScript}" start "${agentType}" 2>&1`,
+            { encoding: 'utf8', cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 1024 * 1024 }
+          );
+
+          // Check if it actually succeeded by looking for "✓ Agent started"
+          if (result.includes('✓ Agent started') || result.includes('Agent started')) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, message: result }));
+          } else {
+            // Might have warnings but still succeeded, or might have failed
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, message: result, warning: true }));
+          }
+        } catch (execError) {
+          console.error('Error starting agent:', execError);
+          const errorMessage = execError.stderr ? execError.stderr.toString() : (execError.stdout ? execError.stdout.toString() : execError.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Failed to start agent: ${errorMessage}` }));
+        }
+      } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
     return;
   }
 
-  // API endpoint for announcement details
-  const announcementMatch = req.url.match(/^\/api\/announcement\/(\d+)$/);
-  if (announcementMatch) {
+  // API endpoint to stop agent daemon
+  if (req.url === '/api/agent/stop' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const agentType = data.agentType;
+        const instanceId = data.instanceId;
+        
+        if (!agentType) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'agentType required' }));
+          return;
+        }
+
+        // Call daemon manager to stop agent
+        const daemonScript = path.join(PROJECT_ROOT, 'scripts', 'agent-daemon.sh');
+        const cmd = instanceId 
+          ? `bash "${daemonScript}" stop "${agentType}" "${instanceId}"`
+          : `bash "${daemonScript}" stop "${agentType}"`;
+        
+        try {
+          const result = execSync(
+            cmd + ' 2>&1',
+            { encoding: 'utf8', cwd: PROJECT_ROOT, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 1024 * 1024 }
+          );
+
+          // Check if it actually succeeded by looking for success indicators
+          if (result.includes('✓') || result.includes('Stopped') || result.includes('cleaning up')) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, message: result }));
+          } else {
+            // Might have warnings but still succeeded, or might have failed
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, message: result, warning: true }));
+          }
+        } catch (execError) {
+          console.error('Error stopping agent:', execError);
+          const errorMessage = execError.stderr ? execError.stderr.toString() : (execError.stdout ? execError.stdout.toString() : execError.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Failed to stop agent: ${errorMessage}` }));
+        }
+      } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
+    return;
+  }
+
+  // API endpoint for agent details (must come after /api/agent/start and /api/agent/stop)
+  const agentMatch = req.url.match(/^\/api\/agent\/([^\/]+)$/);
+  if (agentMatch && req.method === 'GET') {
     try {
-      const announcementId = parseInt(announcementMatch[1]);
-      const announcement = getAnnouncementDetails(announcementId);
+      const agentName = decodeURIComponent(agentMatch[1]);
+      // Don't match "start" or "stop" as agent names
+      if (agentName === 'start' || agentName === 'stop') {
+        if (!res.headersSent) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Not found' }));
+        }
+        return;
+      }
+      const agent = getAgentDetails(agentName);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(announcement, null, 2));
+      res.end(JSON.stringify(agent, null, 2));
     } catch (error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: error.message }));
@@ -473,18 +568,50 @@ function getQueueStatus() {
 
     for (const agent of agentScripts) {
       try {
+        // Get all agent instances with their PIDs and status
         const agentData = execSync(
-          `sqlite3 -json "${DB_FILE}" "SELECT COUNT(*) as total, SUM(CASE WHEN status = 'working' AND last_heartbeat >= datetime('now', '-30 minutes') THEN 1 ELSE 0 END) as working, SUM(CASE WHEN status = 'idle' AND last_heartbeat >= datetime('now', '-30 minutes') THEN 1 ELSE 0 END) as idle FROM agents WHERE name = '${agent.queue}';"`,
+          `sqlite3 -json "${DB_FILE}" "SELECT instance_id, pid, status, last_heartbeat FROM agents WHERE name = '${agent.queue}';"`,
           { encoding: 'utf8', cwd: PROJECT_ROOT }
         );
         
         const parsed = agentData.trim() ? JSON.parse(agentData) : [];
-        const result = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : { total: 0, working: 0, idle: 0 };
+        const instances = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+        
+        let total = 0;
+        let working = 0;
+        let idle = 0;
+        
+        // Check each instance to see if it's actually running
+        for (const instance of instances) {
+          if (!instance.pid) continue;
+          
+          try {
+            // Check if process is actually running
+            execSync(`kill -0 ${instance.pid}`, { stdio: 'ignore' });
+            total++;
+            
+            // Check if heartbeat is recent (within 30 minutes)
+            const heartbeatTime = new Date(instance.last_heartbeat);
+            const now = new Date();
+            const minutesAgo = (now - heartbeatTime) / (1000 * 60);
+            
+            if (minutesAgo <= 30) {
+              if (instance.status === 'working') {
+                working++;
+              } else if (instance.status === 'idle') {
+                idle++;
+              }
+            }
+          } catch (err) {
+            // Process is not running, skip it
+          }
+        }
+        
         agents.push({
           script: agent.script,
-          total: parseInt(result.total) || 0,
-          working: parseInt(result.working) || 0,
-          idle: parseInt(result.idle) || 0,
+          total: total,
+          working: working,
+          idle: idle,
         });
       } catch (err) {
         // If query fails, just add zero counts
@@ -705,23 +832,33 @@ function getAgentDetails(agentName) {
 
   try {
     const agentData = execSync(
-      `sqlite3 -json "${DB_FILE}" "SELECT * FROM agents WHERE name = '${agentName}' ORDER BY last_heartbeat DESC;"`,
+      `sqlite3 -json "${DB_FILE}" "SELECT * FROM agents WHERE name = '${agentName}' ORDER BY created_at DESC;"`,
       { encoding: 'utf8', cwd: PROJECT_ROOT }
     );
 
     const agents = agentData.trim() ? JSON.parse(agentData) : [];
+    const agentsArray = Array.isArray(agents) ? agents : (agents ? [agents] : []);
 
-    // Get tasks claimed by this agent
-    const tasksData = execSync(
-      `sqlite3 -json "${DB_FILE}" "SELECT t.id, t.title, t.status, t.queue_type, qt.queue_id, q.name as queue_name FROM tasks t LEFT JOIN queue_tasks qt ON t.id = qt.task_id LEFT JOIN queues q ON qt.queue_id = q.id WHERE t.claimed_by = '${agentName}' AND t.status IN ('in_progress', 'queued') ORDER BY t.claimed_at DESC;"`,
-      { encoding: 'utf8', cwd: PROJECT_ROOT }
-    );
-
-    const tasks = tasksData.trim() ? JSON.parse(tasksData) : [];
+    // Check if processes are actually running
+    const agentsWithStatus = agentsArray.map(agent => {
+      let isRunning = false;
+      if (agent.pid) {
+        try {
+          // Check if process exists
+          execSync(`kill -0 ${agent.pid}`, { stdio: 'ignore' });
+          isRunning = true;
+        } catch (err) {
+          isRunning = false;
+        }
+      }
+      return {
+        ...agent,
+        isRunning: isRunning
+      };
+    });
 
     return {
-      agents: Array.isArray(agents) ? agents : (agents ? [agents] : []),
-      activeTasks: Array.isArray(tasks) ? tasks : (tasks ? [tasks] : []),
+      agents: agentsWithStatus,
     };
   } catch (error) {
     console.error('Error fetching agent details:', error);
