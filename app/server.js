@@ -198,6 +198,106 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Server-Sent Events endpoint for file change notifications
+  if (req.url === '/api/reload') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    // Send initial connection message
+    res.write('data: connected\n\n');
+
+    // Watch for file changes
+    const watchDirs = [
+      __dirname,
+      path.join(PROJECT_ROOT, 'lib'),
+    ];
+
+    const watchers = [];
+    watchDirs.forEach(dir => {
+      if (fs.existsSync(dir)) {
+        const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
+          if (!filename) return;
+          
+          // Ignore certain files
+          if (filename.includes('node_modules') || 
+              filename.includes('.git') ||
+              filename.endsWith('.db') ||
+              filename.endsWith('.log')) {
+            return;
+          }
+
+          // Only watch relevant file types
+          const ext = path.extname(filename);
+          if (['.js', '.html', '.css', '.md'].includes(ext) || !ext) {
+            res.write(`data: reload\n\n`);
+          }
+        });
+        watchers.push(watcher);
+      }
+    });
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      watchers.forEach(watcher => watcher.close());
+    });
+
+    return;
+  }
+
+  // Server-Sent Events endpoint for file change notifications
+  if (req.url === '/api/reload') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    // Send initial connection message
+    res.write('data: connected\n\n');
+
+    // Watch for file changes
+    const watchDirs = [
+      __dirname,
+      path.join(PROJECT_ROOT, 'lib'),
+    ];
+
+    const watchers = [];
+    watchDirs.forEach(dir => {
+      if (fs.existsSync(dir)) {
+        const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
+          if (!filename) return;
+          
+          // Ignore certain files
+          if (filename.includes('node_modules') || 
+              filename.includes('.git') ||
+              filename.endsWith('.db') ||
+              filename.endsWith('.log')) {
+            return;
+          }
+
+          // Only watch relevant file types
+          const ext = path.extname(filename);
+          if (['.js', '.html', '.css', '.md'].includes(ext) || !ext) {
+            res.write(`data: reload\n\n`);
+          }
+        });
+        watchers.push(watcher);
+      }
+    });
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      watchers.forEach(watcher => watcher.close());
+    });
+
+    return;
+  }
+
   // API endpoint for markdown files
   const fileMatch = req.url.match(/^\/api\/file\?path=(.+)$/);
   if (fileMatch) {
