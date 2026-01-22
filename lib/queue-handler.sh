@@ -330,6 +330,14 @@ check_script_modified() {
     
     local current_mtime
     current_mtime=$(stat -f %m "$script_path" 2>/dev/null || stat -c %Y "$script_path" 2>/dev/null || echo "0")
+
+    # For daemon-managed agents, disable auto-shutdown on script changes
+    if [ "${AGENT_DISABLE_SELF_RELOAD:-0}" = "1" ]; then
+        if [ -n "$last_modified_file" ]; then
+            echo "$current_mtime" > "$last_modified_file"
+        fi
+        return 1
+    fi
     
     if [ -z "$last_modified_file" ] || [ ! -f "$last_modified_file" ]; then
         # First check, save mtime
