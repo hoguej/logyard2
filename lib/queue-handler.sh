@@ -356,6 +356,52 @@ check_script_modified() {
     return 1
 }
 
+# LIB-007: Headless Cursor agent runner
+# Usage: run_cursor_agent WORKSPACE_PATH PROMPT_FILE
+run_cursor_agent() {
+    local workspace_path="$1"
+    local prompt_file="$2"
+
+    if [ -z "$workspace_path" ] || [ -z "$prompt_file" ]; then
+        log_error "run_cursor_agent: workspace_path and prompt_file required"
+        return 1
+    fi
+
+    if [ ! -f "$prompt_file" ]; then
+        log_error "run_cursor_agent: prompt file not found: $prompt_file"
+        return 1
+    fi
+
+    local agent_bin="${CURSOR_AGENT_BIN:-cursor-agent}"
+    if ! command -v "$agent_bin" >/dev/null 2>&1; then
+        if [ -x "$HOME/.local/bin/cursor-agent" ]; then
+            agent_bin="$HOME/.local/bin/cursor-agent"
+        else
+            log_error "Cursor agent binary not found (set CURSOR_AGENT_BIN)"
+            return 127
+        fi
+    fi
+    if [ "$(basename "$agent_bin")" = "cursor" ]; then
+        log_error "CURSOR_AGENT_BIN points to 'cursor' (GUI). Use 'cursor-agent' for headless."
+        return 127
+    fi
+
+    local prompt
+    prompt=$(cat "$prompt_file")
+    if [ -z "$prompt" ]; then
+        log_warn "Prompt file is empty: $prompt_file"
+    fi
+
+    local -a args
+    args=("$agent_bin" --print --output-format text --workspace "$workspace_path")
+    if [ -n "${CURSOR_AGENT_ARGS:-}" ]; then
+        # shellcheck disable=SC2206
+        args+=(${CURSOR_AGENT_ARGS})
+    fi
+
+    "${args[@]}" "$prompt"
+}
+
 # LIB-007: Graceful shutdown handler
 # Setup signal handlers for graceful shutdown
 # Usage: setup_graceful_shutdown CLEANUP_FUNCTION

@@ -239,20 +239,19 @@ You are an execution agent. Your task is to implement the code changes.
 When complete, the code should be ready for pre-commit checks.
 EOF
     
-    log_info "Invoking Cursor agent for execution..."
+    log_info "Invoking headless Cursor agent for execution..."
     log_info "Prompt file: $prompt_file"
-    
-    # Invoke Cursor agent (simulated)
-    if command -v cursor >/dev/null 2>&1; then
-        cursor "$workspace_path" "$prompt_file" 2>/dev/null || true
-    else
-        log_warn "Cursor CLI not found, simulating execution completion..."
-        # Create a placeholder file to show work was done
-        echo "# Implementation: $title" > "$workspace_path/IMPLEMENTATION.md"
-        echo "Task ID: $task_id" >> "$workspace_path/IMPLEMENTATION.md"
-        echo "Root Work Item: $root_work_item_id" >> "$workspace_path/IMPLEMENTATION.md"
-        echo "Status: Implemented" >> "$workspace_path/IMPLEMENTATION.md"
-        sleep 2
+
+    if ! run_cursor_agent "$workspace_path" "$prompt_file"; then
+        log_error "Cursor agent failed for execution task $task_id"
+        update_task_status "$task_id" "failed" "" "Cursor agent failed"
+        return 1
+    fi
+
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        if [ -z "$(git status --porcelain)" ]; then
+            log_warn "No workspace changes detected after execution task $task_id"
+        fi
     fi
     
     log_success "Code execution completed in workspace: $workspace_path"

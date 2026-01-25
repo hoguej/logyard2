@@ -115,3 +115,6 @@ workspaces/
 # Junk files (AI-generated files moved here)
 junk/
 **/junk/
+
+# Code review reports
+code-reviews/

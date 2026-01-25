@@ -102,7 +102,7 @@ cmd_start() {
     echo -e "${CYAN}Starting ${agent_type} agent (instance: ${instance_id})...${RESET}"
     
     # Run supervisor in background, redirect output and stdin, and capture PID
-    AGENT_TYPE="$agent_type" INSTANCE_ID="$instance_id" SCRIPT_PATH="$script_path" STOP_FILE="$stop_file" AGENT_MAX_RESTARTS="${AGENT_MAX_RESTARTS:-5}" \
+    AGENT_TYPE="$agent_type" INSTANCE_ID="$instance_id" SCRIPT_PATH="$script_path" STOP_FILE="$stop_file" AGENT_MAX_RESTARTS="${AGENT_MAX_RESTARTS:-5}" AGENT_OPEN_CURSOR="${AGENT_OPEN_CURSOR:-0}" \
         nohup bash -c '
         set +e
         restart_count=0
@@ -117,7 +117,7 @@ cmd_start() {
 
             start_ts=$(date +%s)
             echo "[SUPERVISOR] launching agent (attempt $((restart_count + 1)))"
-            AGENT_DISABLE_SELF_RELOAD=1 bash "$SCRIPT_PATH" --loop --instance-id "$INSTANCE_ID"
+            AGENT_DISABLE_SELF_RELOAD=1 AGENT_OPEN_CURSOR="${AGENT_OPEN_CURSOR:-0}" bash "$SCRIPT_PATH" --loop --instance-id "$INSTANCE_ID"
             exit_code=$?
             end_ts=$(date +%s)
             run_seconds=$((end_ts - start_ts))
