@@ -248,7 +248,7 @@ EOF
     echo "  Task: $TASK_TITLE"
     echo "  Branch: $BRANCH_NAME"
     echo ""
-    echo "Invoking Cursor agent to work on task..."
+    echo "Invoking headless Cursor agent to work on task..."
     
     # Create tmp directory for agent prompts
     mkdir -p "$PROJECT_ROOT/tmp"
@@ -261,17 +261,30 @@ EOF
     
     echo "Prompt file: $prompt_file"
     
-    # Open workspace in Cursor - agent will reference the prompt file
+    # Invoke headless Cursor agent
     ABS_WORKSPACE_PATH="$(pwd)"
-    if command -v cursor &> /dev/null; then
-        echo "Opening workspace in Cursor and starting agent..."
-        cursor "$ABS_WORKSPACE_PATH" "$prompt_file" 2>/dev/null || true
-        echo "✓ Workspace opened - Agent should now be working"
-    else
-        echo "Error: Cursor CLI not found. Cannot invoke agent."
-        echo "Install Cursor CLI or open manually: cursor $ABS_WORKSPACE_PATH"
+    local agent_bin="${CURSOR_AGENT_BIN:-cursor-agent}"
+    if ! command -v "$agent_bin" >/dev/null 2>&1; then
+        if [ -x "$HOME/.local/bin/cursor-agent" ]; then
+            agent_bin="$HOME/.local/bin/cursor-agent"
+        else
+            echo "Error: cursor-agent not found (set CURSOR_AGENT_BIN)"
+            return 1
+        fi
+    fi
+    if [ "$(basename "$agent_bin")" = "cursor" ]; then
+        echo "Error: CURSOR_AGENT_BIN points to 'cursor' (GUI). Use 'cursor-agent' for headless."
         return 1
     fi
+
+    prompt_content=$(cat "$prompt_file")
+    if [ -z "$prompt_content" ]; then
+        echo "Warning: prompt file is empty: $prompt_file"
+    fi
+
+    echo "Starting headless agent..."
+    "$agent_bin" --print --output-format text --workspace "$ABS_WORKSPACE_PATH" ${CURSOR_AGENT_ARGS:-} "$prompt_content"
+    echo "✓ Headless agent invoked"
     
     return 0
 }
